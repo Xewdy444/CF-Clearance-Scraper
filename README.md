@@ -1,6 +1,6 @@
 # CF-Clearance-Scraper
 
-A simple program for fetching cf_clearance cookies from websites issuing cloudflare challanges to users. This program works on JavaScript and (non-interactive) managed challenges. It does not work on legacy CAPTCHA challenges, since human interraction would  be required.
+A simple program for fetching cf_clearance cookies from websites issuing cloudflare challenges to users. This program works on JavaScript and (non-interactive) managed challenges. It does not work on legacy CAPTCHA challenges, since human interraction would  be required.
 
 ## Installation
 
@@ -26,7 +26,7 @@ playwright install-deps
 ```
 usage: cf_cookie.py [-h] [-v] [-u URL] [-f FILE] [-t TIMEOUT] [-p PROXY]
 
-Fetches cf_clearance cookies from websites issuing cloudflare challanges to users
+Fetches cf_clearance cookies from websites issuing cloudflare challenges to users
 
 options:
   -h, --help            show this help message and exit
