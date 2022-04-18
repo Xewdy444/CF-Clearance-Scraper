@@ -7,7 +7,7 @@ async def main():
 
     user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15"
 
-    parser = argparse.ArgumentParser(description="Fetches cf_clearance cookies from websites issuing cloudflare challanges to users")
+    parser = argparse.ArgumentParser(description="Fetches cf_clearance cookies from websites issuing cloudflare challenges to users")
     parser.add_argument("-v", "--verbose", help="Enable verbose logging", action="store_true")
     parser.add_argument("-u", "--url", help="URL to fetch cf_clearance cookie from", type=str, default=None)
     parser.add_argument("-f", "--file", help="File to write the cf_clearance cookie value to", type=str, default=None)
