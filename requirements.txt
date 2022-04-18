@@ -1,0 +1,4 @@
+pysocks
+asyncio
+argparse
+playwright
