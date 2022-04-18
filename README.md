@@ -37,7 +37,7 @@ options:
                         Cookie fetch timeout (milliseconds)
   -p PROXY, --proxy PROXY
                         Proxy server to use for requests (Authentification not
-                        supported). Example: socks5://172.66.43.144
+                        supported). Example: socks5://172.66.43.144:1080
 ```
 ```
 Example: python3 cf_cookie.py -u https://nowsecure.nl -f cookies.txt -v
