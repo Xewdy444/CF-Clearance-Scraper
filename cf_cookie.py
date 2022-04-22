@@ -12,7 +12,7 @@ async def main():
     parser.add_argument("-u", "--url", help="URL to fetch cf_clearance cookie from", type=str, default=None)
     parser.add_argument("-f", "--file", help="File to write the cf_clearance cookie value to", type=str, default=None)
     parser.add_argument("-t", "--timeout", help="Cookie fetch timeout (milliseconds)", type=int, default=5000)
-    parser.add_argument("-p", "--proxy", help="Proxy server to use for requests (Authentification not supported). Example: socks5://172.66.43.144", type=str, default=None)
+    parser.add_argument("-p", "--proxy", help="Proxy server to use for requests (Authentification not supported). Example: socks5://172.66.43.144:1080", type=str, default=None)
     args = parser.parse_args()
 
     if args.url is None:
