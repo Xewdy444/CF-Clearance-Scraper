@@ -11,7 +11,7 @@ In order to bypass cloudflare challenges with the cloudflare clearance cookies, 
 - The user agent used to fetch the clearance cookie must match the user agent being used within the requests that use the clearance cookie (You can edit the user agent used by the scraper by changing the ```user_agent``` variable on line 10)
 - The IP address used to fetch the clearance cookie must match the IP address being used to make the requests that use the clearance cookie
 
-```
+```mermaid
 flowchart
 	N14e["cf_clearance"]
 	N14f["IP Address"]
