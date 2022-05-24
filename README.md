@@ -8,13 +8,16 @@ This scraper cannot solve CAPTCHA challenges since human interaction would be re
 ## Clearance Cookie Usage
 In order to bypass cloudflare challenges with the cloudflare clearance cookies, you must make sure of two things:
 
-- The user agent used to fetch the clearance cookie must match the user agent being used within the requests that use the clearance cookie (You can edit the user agent used by the scraper by changing the ```user_agent	``` variable on line 10)
+- The user agent used to fetch the clearance cookie must match the user agent being used within the requests that use the clearance cookie (You can edit the user agent used by the scraper by changing the ```user_agent``` variable on line 10)
 - The IP address used to fetch the clearance cookie must match the IP address being used to make the requests that use the clearance cookie
-		
-```mermaid
-  graph TD;
-      cf_clearance-->IP Address;
-      cf_clearance-->User Agent;
+
+```
+flowchart
+	N14e["cf_clearance"]
+	N14f["IP Address"]
+	N150["User Agent"]
+	N14e --> N14f
+	N14e --> N150
 ```
 
 ## Installation
