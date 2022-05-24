@@ -1,28 +1,39 @@
 # CF-Clearance-Scraper
 
-A simple program for fetching cf_clearance cookies from websites issuing cloudflare challenges to users. This program works on JavaScript and (non-interactive) managed challenges. It does not work on legacy CAPTCHA challenges, since human interraction would  be required.
+A simple program for fetching cf_clearance cookies from websites issuing cloudflare challenges to users. This program works on JavaScript and (non-interactive) managed challenges. 
+
+#### Please Note
+This scraper cannot solve CAPTCHA challenges since human interaction would be required.
+
+## Clearance Cookie Usage
+In order to bypass cloudflare challenges with the cloudflare clearance cookies, you must make sure of two things:
+
+- The user agent used to fetch the clearance cookie must match the user agent being used within the requests that use the clearance cookie (You can edit the user agent used by the scraper by changing the ```user_agent	``` variable on line 10)
+- The IP address used to fetch the clearance cookie must match the IP address being used to make the requests that use the clearance cookie
+		
+```mermaid
+  graph TD;
+      cf_clearance-->IP Address;
+      cf_clearance-->User Agent;
+```
 
 ## Installation
-
 ```
 pip3 install -r requirements.txt
 ```
 
 #### Mac | Windows
-
 ```
 npm install playwright
 ```
 
 #### Linux
-
 ```
 npm install playwright
 playwright install-deps
 ```
 
 ## Usage
-
 ```
 usage: cf_cookie.py [-h] [-v] [-u URL] [-f FILE] [-t TIMEOUT] [-p PROXY]
 
