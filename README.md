@@ -21,20 +21,18 @@ flowchart
 ```
 
 ## Installation
-```
-pip3 install -r requirements.txt
-```
+
+	$ pip install -r requirements.txt
 
 #### Mac | Windows
-```
-npm install playwright
-```
+
+	$ npm install playwright
 
 #### Linux
-```
-npm install playwright
-playwright install-deps
-```
+
+	$ npm install playwright
+	$ playwright install-deps
+
 
 ## Usage
 ```
