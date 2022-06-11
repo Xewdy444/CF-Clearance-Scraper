@@ -1,5 +1,7 @@
 import argparse
 import asyncio
+import sys
+from os import path
 
 import requests
 from playwright.async_api import async_playwright
@@ -46,8 +48,7 @@ async def main():
     args = parser.parse_args()
 
     if args.url is None:
-        parser.print_help()
-        exit()
+        sys.exit(parser.print_help())
 
     headers = {
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -66,8 +67,7 @@ async def main():
             init_request = requests.get(args.url, headers=headers)
     except Exception as e:
         if args.verbose is True:
-            print(f"[!] {e}")
-        exit()
+            sys.exit(f"[!] {e}")
 
     cf_challenge_html = [
         "<title>Please Wait... | Cloudflare</title>",
@@ -82,8 +82,7 @@ async def main():
             )
     else:
         if args.verbose is True:
-            print("[!] Cloudflare challenge not detected. Exiting...")
-        exit()
+            sys.exit("[!] Cloudflare challenge not detected. Exiting...")
 
     async with async_playwright() as p:
         if args.verbose is True:
@@ -104,7 +103,7 @@ async def main():
                 print("[!] {}".format(str(e).split("\n")[0]))
                 print("[+] Closing headless browser...")
             await browser.close()
-            exit()
+            sys.exit()
 
         cookies = await page.context.cookies()
         cf_clearance_cookie = [
@@ -119,19 +118,20 @@ async def main():
 
             if args.file:
                 try:
-                    with open(args.file, "x") as file:
-                        if args.verbose is True:
-                            print(
-                                f"[+] Writing cf_clearance cookie value to {args.file}..."
-                            )
-                        file.write(cf_clearance_cookie[0]["value"] + "\n")
-                except FileExistsError:
-                    with open(args.file, "a") as file:
-                        if args.verbose is True:
-                            print(
-                                f"[+] Writing cf_clearance cookie value to {args.file}..."
-                            )
-                        file.write(cf_clearance_cookie[0]["value"] + "\n")
+                    if path.exists(args.file):
+                        with open(args.file, "a") as file:
+                            if args.verbose is True:
+                                print(
+                                    f"[+] Writing cf_clearance cookie value to {args.file}..."
+                                )
+                            file.write(cf_clearance_cookie[0]["value"] + "\n")
+                    else:
+                        with open(args.file, "w") as file:
+                            if args.verbose is True:
+                                print(
+                                    f"[+] Writing cf_clearance cookie value to {args.file}..."
+                                )
+                            file.write(cf_clearance_cookie[0]["value"] + "\n")
                 except Exception as e:
                     print(f"[!] {e}")
         else:
@@ -147,4 +147,4 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        exit()
+        sys.exit()

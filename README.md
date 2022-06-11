@@ -36,7 +36,7 @@ flowchart
 
 ## Usage
 ```
-usage: cf_cookie.py [-h] [-v] [-u URL] [-f FILE] [-t TIMEOUT] [-p PROXY]
+usage: main.py [-h] [-v] [-u URL] [-f FILE] [-t TIMEOUT] [-p PROXY]
 
 Fetches cf_clearance cookies from websites issuing cloudflare challenges to users
 
@@ -52,5 +52,5 @@ options:
                         supported). Example: socks5://172.66.43.144:1080
 ```
 ```
-Example: python3 cf_cookie.py -u https://nowsecure.nl -f cookies.txt -v
+Example: python3 main.py -u https://nowsecure.nl -f cookies.txt -v
 ```
