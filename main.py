@@ -1,7 +1,6 @@
 import argparse
 import asyncio
 import sys
-from os import path
 
 import requests
 from playwright.async_api import async_playwright
@@ -118,20 +117,12 @@ async def main():
 
             if args.file:
                 try:
-                    if path.exists(args.file):
-                        with open(args.file, "a") as file:
-                            if args.verbose is True:
-                                print(
-                                    f"[+] Writing cf_clearance cookie value to {args.file}..."
-                                )
-                            file.write(cf_clearance_cookie[0]["value"] + "\n")
-                    else:
-                        with open(args.file, "w") as file:
-                            if args.verbose is True:
-                                print(
-                                    f"[+] Writing cf_clearance cookie value to {args.file}..."
-                                )
-                            file.write(cf_clearance_cookie[0]["value"] + "\n")
+                    with open(args.file, "a") as file:
+                        if args.verbose is True:
+                            print(
+                                f"[+] Writing cf_clearance cookie value to {args.file}..."
+                            )
+                        file.write(cf_clearance_cookie[0]["value"] + "\n")
                 except Exception as e:
                     print(f"[!] {e}")
         else:
