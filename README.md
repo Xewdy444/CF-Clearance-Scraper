@@ -22,8 +22,9 @@ flowchart
 
 ## Installation
 
-	$ pip install -r requirements.txt
-  $ playwright install --with-deps webkit
+    $ pip install -r requirements.txt
+    $ playwright install --with-deps webkit
+
 
 ## Usage
 ```
