@@ -23,16 +23,7 @@ flowchart
 ## Installation
 
 	$ pip install -r requirements.txt
-
-#### Mac | Windows
-
-	$ npm install playwright
-
-#### Linux
-
-	$ npm install playwright
-	$ playwright install-deps
-
+  $ playwright install --with-deps webkit
 
 ## Usage
 ```
@@ -52,5 +43,5 @@ options:
                         supported). Example: socks5://172.66.43.144:1080
 ```
 ```
-Example: python3 main.py -u https://nowsecure.nl -f cookies.txt -v
+Example: python main.py -u https://nowsecure.nl -f cookies.txt -v
 ```

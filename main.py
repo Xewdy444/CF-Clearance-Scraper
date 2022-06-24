@@ -59,14 +59,13 @@ async def main():
     }
 
     try:
-        if args.proxy:
+        if args.proxy is not None:
             proxy = {"http": args.proxy, "https": args.proxy}
             init_request = requests.get(args.url, headers=headers, proxies=proxy)
         else:
             init_request = requests.get(args.url, headers=headers)
     except Exception as e:
-        if args.verbose is True:
-            sys.exit(f"[!] {e}")
+        sys.exit(f"[!] {e}" if args.verbose is True else None)
 
     cf_challenge_html = [
         "<title>Please Wait... | Cloudflare</title>",
@@ -80,14 +79,17 @@ async def main():
                 "[+] Cloudflare challenge detected. Attempting to fetch cf_clearance cookie..."
             )
     else:
-        if args.verbose is True:
-            sys.exit("[!] Cloudflare challenge not detected. Exiting...")
+        sys.exit(
+            "[!] Cloudflare challenge not detected. Exiting..."
+            if args.verbose is True
+            else None
+        )
 
     async with async_playwright() as p:
         if args.verbose is True:
             print("[+] Launching headless browser...")
 
-        if args.proxy:
+        if args.proxy is not None:
             browser = await p.webkit.launch(headless=True, proxy={"server": args.proxy})
         else:
             browser = await p.webkit.launch(headless=True)
@@ -105,24 +107,24 @@ async def main():
             sys.exit()
 
         cookies = await page.context.cookies()
-        cf_clearance_cookie = [
-            cookie for cookie in cookies if cookie["name"] == "cf_clearance"
-        ]
+        cookie_value = "".join(
+            cookie["value"] for cookie in cookies if cookie["name"] == "cf_clearance"
+        )
 
-        if len(cf_clearance_cookie) != 0:
+        if len(cookie_value) != 0:
             if args.verbose is True:
-                print(f"[+] Cookie: cf_clearance={cf_clearance_cookie[0]['value']}")
+                print(f"[+] Cookie: cf_clearance=" + cookie_value)
             elif args.verbose is False:
-                print(cf_clearance_cookie[0]["value"])
+                print(cookie_value)
 
-            if args.file:
+            if args.file is not None:
                 try:
                     with open(args.file, "a") as file:
                         if args.verbose is True:
                             print(
                                 f"[+] Writing cf_clearance cookie value to {args.file}..."
                             )
-                        file.write(cf_clearance_cookie[0]["value"] + "\n")
+                        file.write(cookie_value + "\n")
                 except Exception as e:
                     print(f"[!] {e}")
         else:
