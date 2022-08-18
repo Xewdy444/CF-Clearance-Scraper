@@ -1,4 +1,3 @@
-pysocks
-asyncio
-argparse
+brotli
+httpx
 playwright
