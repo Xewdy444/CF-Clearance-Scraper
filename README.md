@@ -35,7 +35,7 @@ options:
   -u URL, --url URL     URL to fetch cf_clearance cookie from
   -f FILE, --file FILE  File to write the cf_clearance cookie to
   -t TIMEOUT, --timeout TIMEOUT
-                        Cookie fetch timeout (seconds)
+                        Request timeout (seconds)
   -p PROXY, --proxy PROXY
                         Proxy server to use for requests (SOCKS5 proxy authentication not supported). Example: socks5://172.66.43.144:1080 or http://username:password@172.66.43.144:1080
 ```

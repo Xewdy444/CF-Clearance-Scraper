@@ -58,8 +58,7 @@ def browser(args: argparse.Namespace) -> dict:
             page = context.new_page()
             page.goto(args.url)
         except Exception as e:
-            if args.verbose:
-                sys.exit("[!] {}".format(str(e).split("\n")[0]))
+            sys.exit("[!] {}".format(str(e).split("\n")[0]) if args.verbose else None)
 
         verify_button_text = "Verify\s(I|you)\s(am|are)\s(not\sa\sbot|(a\s)?human)"
         verify_button = page.locator(f"text=/{verify_button_text}/")
@@ -103,7 +102,7 @@ def main() -> None:
     parser.add_argument(
         "-t",
         "--timeout",
-        help="Cookie fetch timeout (seconds)",
+        help="Request timeout (seconds)",
         type=int,
         default=5,
     )
