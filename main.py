@@ -13,9 +13,8 @@ USER_AGENT = (
 
 def detect_challenge(html: str) -> bool:
     challenge_html = (
-        "<title>Please Wait... | Cloudflare</title>",
-        "<title>Just a moment...</title>",
-        "Checking your browser before accessing",
+        "/cdn-cgi/challenge-platform/h/g/orchestrate/managed/v1",
+        "/cdn-cgi/challenge-platform/h/g/orchestrate/jsch/v1",
     )
 
     return any(x in html for x in challenge_html)
@@ -144,8 +143,12 @@ def main() -> None:
     except Exception as e:
         sys.exit(f"[!] {e}" if args.verbose else None)
 
-    if "<title>Attention Required! | Cloudflare</title>" in init_request.text:
-        sys.exit("[!] Cloudflare returned a CAPTCHA page" if args.verbose else None)
+    if "/cdn-cgi/challenge-platform/h/g/orchestrate/captcha/v1" in init_request.text:
+        sys.exit(
+            "[!] Cloudflare returned a CAPTCHA page. Exiting..."
+            if args.verbose
+            else None
+        )
 
     if detect_challenge(init_request.text):
         if args.verbose:
