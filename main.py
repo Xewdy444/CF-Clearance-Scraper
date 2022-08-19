@@ -118,9 +118,9 @@ def main() -> None:
         sys.exit(parser.print_help())
 
     headers = {
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
         "Accept-Encoding": "gzip, deflate, br",
-        "Accept-Language": "en-us",
+        "Accept-Language": "en-US,en;q=0.5",
         "Connection": "keep-alive",
         "Upgrade-Insecure-Requests": "1",
         "User-Agent": USER_AGENT,
@@ -172,17 +172,19 @@ def main() -> None:
             "[!] Failed to retrieve cf_clearance cookie." if args.verbose else None
         )
 
+    cookie = f"cf_clearance={cookie_value}"
+
     if args.verbose:
-        print(f"[+] Cookie: cf_clearance={cookie_value}")
+        print(f"[+] Cookie: {cookie}")
     elif not args.verbose:
-        print(f"cf_clearance={cookie_value}")
+        print(cookie)
 
     if args.file:
         if args.verbose:
-            print(f"[+] Writing cf_clearance cookie value to {args.file}...")
+            print(f"[+] Writing cf_clearance cookie to {args.file}...")
 
         with open(args.file, "a") as file:
-            file.write(f"cf_clearance={cookie_value}\n")
+            file.write(f"{cookie}\n")
 
 
 if __name__ == "__main__":
