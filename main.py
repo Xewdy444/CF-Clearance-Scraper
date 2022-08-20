@@ -6,7 +6,9 @@ import httpx
 from playwright._impl._api_types import TimeoutError
 from playwright.sync_api import sync_playwright
 
-USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15"
+USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 6.2; Win64; x64) AppleWebKit/605.1.15 (KHTML, like Gecko)"
+)
 
 
 def detect_challenge(html: str) -> bool:
@@ -67,6 +69,7 @@ def browser(args: argparse.Namespace) -> dict:
                 with page.expect_navigation():
                     if re.search(verify_button_text, page.content()):
                         verify_button.click()
+                        page.wait_for_timeout(ms_timeout)
                     else:
                         page.reload()
         except TimeoutError:
