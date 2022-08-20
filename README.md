@@ -20,7 +20,7 @@ flowchart
 ## Installation
 
     $ pip install -r requirements.txt
-    $ playwright install --with-deps firefox
+    $ playwright install --with-deps webkit
 
 
 ## Usage
