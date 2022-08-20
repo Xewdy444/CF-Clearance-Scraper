@@ -6,9 +6,7 @@ import httpx
 from playwright._impl._api_types import TimeoutError
 from playwright.sync_api import sync_playwright
 
-USER_AGENT = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:99.0) Gecko/20100101 Firefox/99.0"
-)
+USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15"
 
 
 def detect_challenge(html: str) -> bool:
@@ -45,9 +43,9 @@ def browser(args: argparse.Namespace) -> dict:
             print("[+] Launching headless browser...")
 
         if args.proxy:
-            browser = p.firefox.launch(headless=True, proxy=parse_proxy(args))
+            browser = p.webkit.launch(headless=True, proxy=parse_proxy(args))
         else:
-            browser = p.firefox.launch(headless=True)
+            browser = p.webkit.launch(headless=True)
 
         ms_timeout = args.timeout * 1000
 
