@@ -1,6 +1,7 @@
 import argparse
 import re
 import sys
+from typing import Any, Dict, List
 
 import httpx
 from playwright._impl._api_types import TimeoutError
@@ -20,7 +21,7 @@ def detect_challenge(html: str) -> bool:
     return any(x in html for x in challenge_html)
 
 
-def parse_proxy(args: argparse.Namespace) -> dict:
+def parse_proxy(args: argparse.Namespace) -> Dict[str, str]:
     if "@" in args.proxy:
         protocol = args.proxy.split("://")[0]
         server = f'{protocol}://{args.proxy.split("@")[1]}'
@@ -39,7 +40,7 @@ def parse_proxy(args: argparse.Namespace) -> dict:
     return proxy
 
 
-def browser(args: argparse.Namespace) -> dict:
+def browser(args: argparse.Namespace) -> List[Dict[str, Any]]:
     with sync_playwright() as p:
         if args.verbose:
             print("[+] Launching headless browser...")
@@ -55,12 +56,27 @@ def browser(args: argparse.Namespace) -> dict:
             context = browser.new_context(user_agent=USER_AGENT)
             context.set_default_timeout(ms_timeout)
             page = context.new_page()
+
+            if args.verbose:
+                print(f"[+] Going to {args.url}...")
+
             page.goto(args.url)
         except Exception as e:
             sys.exit("[!] {}".format(str(e).split("\n")[0]) if args.verbose else None)
 
         verify_button_text = "Verify\s(I|you)\s(am|are)\s(not\sa\sbot|(a\s)?human)"
         verify_button = page.locator(f"text=/{verify_button_text}/")
+
+        if args.verbose:
+            if (
+                "/cdn-cgi/challenge-platform/h/g/orchestrate/managed/v1"
+                in page.content()
+            ):
+                print("[+] Solving cloudflare challenge [Managed]...")
+            elif (
+                "/cdn-cgi/challenge-platform/h/g/orchestrate/jsch/v1" in page.content()
+            ):
+                print("[+] Solving cloudflare challenge [JavaScript]...")
 
         try:
             while detect_challenge(page.content()):
@@ -127,6 +143,9 @@ def main() -> None:
         "User-Agent": USER_AGENT,
     }
 
+    if args.verbose:
+        print("[+] Checking for cloudflare challenge...")
+
     try:
         if args.proxy:
             with httpx.Client(
@@ -135,27 +154,25 @@ def main() -> None:
                 timeout=args.timeout,
                 proxies=args.proxy,
             ) as client:
-                init_request = client.get(args.url, headers=headers)
+                probe_request = client.get(args.url, headers=headers)
         else:
             with httpx.Client(
                 http2=True, follow_redirects=True, timeout=args.timeout
             ) as client:
-                init_request = client.get(args.url, headers=headers)
+                probe_request = client.get(args.url, headers=headers)
     except Exception as e:
         sys.exit(f"[!] {e}" if args.verbose else None)
 
-    if "/cdn-cgi/challenge-platform/h/g/orchestrate/captcha/v1" in init_request.text:
+    if "/cdn-cgi/challenge-platform/h/g/orchestrate/captcha/v1" in probe_request.text:
         sys.exit(
             "[!] Cloudflare returned a CAPTCHA page. Exiting..."
             if args.verbose
             else None
         )
 
-    if detect_challenge(init_request.text):
+    if detect_challenge(probe_request.text):
         if args.verbose:
-            print(
-                "[+] Cloudflare challenge detected. Attempting to fetch cf_clearance cookie..."
-            )
+            print("[+] Cloudflare challenge detected. Fetching cf_clearance cookie...")
     else:
         sys.exit(
             "[!] Cloudflare challenge not detected. Exiting..."
