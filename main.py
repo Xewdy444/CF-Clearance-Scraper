@@ -64,7 +64,7 @@ def browser(args: argparse.Namespace) -> List[Dict[str, Any]]:
         except Exception as e:
             sys.exit("[!] {}".format(str(e).split("\n")[0]) if args.verbose else None)
 
-        verify_button_text = "Verify\s(I|you)\s(am|are)\s(not\sa\sbot|(a\s)?human)"
+        verify_button_text = "Verify (I am|you are) (not a bot|(a )?human)"
         verify_button = page.locator(f"text=/{verify_button_text}/")
 
         if args.verbose:
