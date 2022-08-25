@@ -14,11 +14,11 @@ USER_AGENT = (
 
 def detect_challenge(html: str) -> bool:
     challenge_html = (
-        "/cdn-cgi/challenge-platform/h/g/orchestrate/managed/v1",
-        "/cdn-cgi/challenge-platform/h/g/orchestrate/jsch/v1",
+        "/cdn-cgi/challenge-platform/h/[gb]/orchestrate/managed/v1",
+        "/cdn-cgi/challenge-platform/h/[gb]/orchestrate/jsch/v1",
     )
 
-    return any(x in html for x in challenge_html)
+    return any(re.search(x, html) for x in challenge_html)
 
 
 def parse_proxy(args: argparse.Namespace) -> Dict[str, str]:
@@ -68,13 +68,13 @@ def browser(args: argparse.Namespace) -> List[Dict[str, Any]]:
         verify_button = page.locator(f"text=/{verify_button_text}/")
 
         if args.verbose:
-            if (
-                "/cdn-cgi/challenge-platform/h/g/orchestrate/managed/v1"
-                in page.content()
+            if re.search(
+                "/cdn-cgi/challenge-platform/h/[gb]/orchestrate/managed/v1",
+                page.content(),
             ):
                 print("[+] Solving cloudflare challenge [Managed]...")
-            elif (
-                "/cdn-cgi/challenge-platform/h/g/orchestrate/jsch/v1" in page.content()
+            elif re.search(
+                "/cdn-cgi/challenge-platform/h/[gb]/orchestrate/jsch/v1", page.content()
             ):
                 print("[+] Solving cloudflare challenge [JavaScript]...")
 
@@ -163,7 +163,9 @@ def main() -> None:
     except Exception as e:
         sys.exit(f"[!] {e}" if args.verbose else None)
 
-    if "/cdn-cgi/challenge-platform/h/g/orchestrate/captcha/v1" in probe_request.text:
+    if re.search(
+        "/cdn-cgi/challenge-platform/h/[gb]/orchestrate/captcha/v1", probe_request.text
+    ):
         sys.exit(
             "[!] Cloudflare returned a CAPTCHA page. Exiting..."
             if args.verbose
