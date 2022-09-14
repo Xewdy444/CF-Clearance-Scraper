@@ -23,7 +23,7 @@ def detect_challenge(html: str) -> bool:
 
 def parse_proxy(proxy: str) -> Dict[str, str]:
     if "@" in proxy:
-        proxy_regex = re.match("([a-zA-Z]+):\/\/(.+):(.+)@(.+)", proxy)
+        proxy_regex = re.match("(.+):\/\/(.+):(.+)@(.+)", proxy)
         server = f"{proxy_regex.group(1)}://{proxy_regex.group(4)}"
 
         proxy_dict = {
