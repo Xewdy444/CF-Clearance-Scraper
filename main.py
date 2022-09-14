@@ -14,30 +14,27 @@ USER_AGENT = (
 
 def detect_challenge(html: str) -> bool:
     challenge_html = (
-        "/cdn-cgi/challenge-platform/h/[gb]/orchestrate/managed/v1",
-        "/cdn-cgi/challenge-platform/h/[gb]/orchestrate/jsch/v1",
+        "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/managed/v1",
+        "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/jsch/v1",
     )
 
     return any(re.search(x, html) for x in challenge_html)
 
 
-def parse_proxy(args: argparse.Namespace) -> Dict[str, str]:
-    if "@" in args.proxy:
-        protocol = args.proxy.split("://")[0]
-        server = f'{protocol}://{args.proxy.split("@")[1]}'
+def parse_proxy(proxy: str) -> Dict[str, str]:
+    if "@" in proxy:
+        proxy_regex = re.match("([a-zA-Z]+):\/\/(.+):(.+)@(.+)", proxy)
+        server = f"{proxy_regex.group(1)}://{proxy_regex.group(4)}"
 
-        username = args.proxy.split("@")[0].split("://")[1].split(":")[0]
-        password = args.proxy.split("@")[0].split("://")[1].split(":")[1]
-
-        proxy = {
+        proxy_dict = {
             "server": server,
-            "username": username,
-            "password": password,
+            "username": proxy_regex.group(2),
+            "password": proxy_regex.group(3),
         }
     else:
-        proxy = {"server": args.proxy}
+        proxy_dict = {"server": proxy}
 
-    return proxy
+    return proxy_dict
 
 
 def browser(args: argparse.Namespace) -> List[Dict[str, Any]]:
@@ -46,7 +43,7 @@ def browser(args: argparse.Namespace) -> List[Dict[str, Any]]:
             print("[+] Launching headless browser...")
 
         if args.proxy:
-            browser = p.webkit.launch(headless=True, proxy=parse_proxy(args))
+            browser = p.webkit.launch(headless=True, proxy=parse_proxy(args.proxy))
         else:
             browser = p.webkit.launch(headless=True)
 
@@ -69,12 +66,12 @@ def browser(args: argparse.Namespace) -> List[Dict[str, Any]]:
 
         if args.verbose:
             if re.search(
-                "/cdn-cgi/challenge-platform/h/[gb]/orchestrate/managed/v1",
+                "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/managed/v1",
                 page.content(),
             ):
                 print("[+] Solving cloudflare challenge [Managed]...")
             elif re.search(
-                "/cdn-cgi/challenge-platform/h/[gb]/orchestrate/jsch/v1", page.content()
+                "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/jsch/v1", page.content()
             ):
                 print("[+] Solving cloudflare challenge [JavaScript]...")
 
@@ -82,12 +79,10 @@ def browser(args: argparse.Namespace) -> List[Dict[str, Any]]:
             while detect_challenge(page.content()):
                 page.wait_for_load_state("networkidle")
 
-                with page.expect_navigation():
-                    if re.search(verify_button_text, page.content()):
-                        verify_button.click()
-                        page.wait_for_timeout(ms_timeout)
-                    else:
-                        page.reload()
+                if re.search(verify_button_text, page.content()):
+                    verify_button.click()
+                else:
+                    page.reload()
         except TimeoutError:
             pass
 
@@ -164,7 +159,7 @@ def main() -> None:
         sys.exit(f"[!] {e}" if args.verbose else None)
 
     if re.search(
-        "/cdn-cgi/challenge-platform/h/[gb]/orchestrate/captcha/v1", probe_request.text
+        "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/captcha/v1", probe_request.text
     ):
         sys.exit(
             "[!] Cloudflare returned a CAPTCHA page. Exiting..."
