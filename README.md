@@ -20,7 +20,7 @@ flowchart
 ## Installation
 
     $ pip install -r requirements.txt
-    $ playwright install --with-deps webkit
+    $ python -m playwright install --with-deps webkit
 
 
 ## Usage
@@ -31,7 +31,7 @@ Fetches cf_clearance cookies from websites issuing cloudflare challenges to user
 
 options:
   -h, --help            show this help message and exit
-  -v, --verbose         Enable verbose logging
+  -v, --verbose         Increase output verbosity
   -u URL, --url URL     URL to fetch cf_clearance cookie from
   -f FILE, --file FILE  File to write the cf_clearance cookie to
   -t TIMEOUT, --timeout TIMEOUT

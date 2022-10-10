@@ -1,4 +1,5 @@
 import argparse
+import logging
 import re
 import sys
 from typing import Any, Dict, List
@@ -23,7 +24,7 @@ def detect_challenge(html: str) -> bool:
 
 def parse_proxy(proxy: str) -> Dict[str, str]:
     if "@" in proxy:
-        proxy_regex = re.match("(.+):\/\/(.+):(.+)@(.+)", proxy)
+        proxy_regex = re.match("(.+)://(.+):(.+)@(.+)", proxy)
         server = f"{proxy_regex.group(1)}://{proxy_regex.group(4)}"
 
         proxy_dict = {
@@ -39,10 +40,9 @@ def parse_proxy(proxy: str) -> Dict[str, str]:
 
 def browser(args: argparse.Namespace) -> List[Dict[str, Any]]:
     with sync_playwright() as p:
-        if args.verbose:
-            print("[+] Launching headless browser...")
+        logging.info("Launching headless browser...")
 
-        if args.proxy:
+        if args.proxy is not None:
             browser = p.webkit.launch(headless=True, proxy=parse_proxy(args.proxy))
         else:
             browser = p.webkit.launch(headless=True)
@@ -54,26 +54,25 @@ def browser(args: argparse.Namespace) -> List[Dict[str, Any]]:
             context.set_default_timeout(ms_timeout)
             page = context.new_page()
 
-            if args.verbose:
-                print(f"[+] Going to {args.url}...")
+            logging.info(f"Going to {args.url}...")
 
             page.goto(args.url)
         except Exception as e:
-            sys.exit("[!] {}".format(str(e).split("\n")[0]) if args.verbose else None)
+            parsed_error = "{}".format(str(e).split("\n")[0])
+            sys.exit(logging.info(parsed_error))
 
         verify_button_text = "Verify (I am|you are) (not a bot|(a )?human)"
         verify_button = page.locator(f"text=/{verify_button_text}/")
 
-        if args.verbose:
-            if re.search(
-                "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/managed/v1",
-                page.content(),
-            ):
-                print("[+] Solving cloudflare challenge [Managed]...")
-            elif re.search(
-                "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/jsch/v1", page.content()
-            ):
-                print("[+] Solving cloudflare challenge [JavaScript]...")
+        if re.search(
+            "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/managed/v1",
+            page.content(),
+        ):
+            logging.info("Solving cloudflare challenge [Managed]...")
+        elif re.search(
+            "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/jsch/v1", page.content()
+        ):
+            logging.info("Solving cloudflare challenge [JavaScript]...")
 
         try:
             while detect_challenge(page.content()):
@@ -94,7 +93,7 @@ def main() -> None:
         description="Fetches cf_clearance cookies from websites issuing cloudflare challenges to users"
     )
     parser.add_argument(
-        "-v", "--verbose", help="Enable verbose logging", action="store_true"
+        "-v", "--verbose", help="Increase output verbosity", action="store_true"
     )
     parser.add_argument(
         "-u",
@@ -102,6 +101,7 @@ def main() -> None:
         help="URL to fetch cf_clearance cookie from",
         type=str,
         default=None,
+        required=True,
     )
     parser.add_argument(
         "-f",
@@ -126,8 +126,12 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    if not args.url:
-        sys.exit(parser.print_help())
+    if args.verbose:
+        logging.basicConfig(
+            format="[%(asctime)s] %(message)s",
+            datefmt="%H:%M:%S",
+            level=logging.INFO,
+        )
 
     headers = {
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
@@ -138,65 +142,48 @@ def main() -> None:
         "User-Agent": USER_AGENT,
     }
 
-    if args.verbose:
-        print("[+] Checking for cloudflare challenge...")
+    logging.info("Checking for cloudflare challenge...")
 
     try:
-        if args.proxy:
-            with httpx.Client(
-                http2=True,
-                follow_redirects=True,
-                timeout=args.timeout,
-                proxies=args.proxy,
-            ) as client:
-                probe_request = client.get(args.url, headers=headers)
-        else:
-            with httpx.Client(
-                http2=True, follow_redirects=True, timeout=args.timeout
-            ) as client:
-                probe_request = client.get(args.url, headers=headers)
+        with httpx.Client(
+            http2=True,
+            follow_redirects=True,
+            headers=headers,
+            timeout=args.timeout,
+            proxies=args.proxy,
+        ) as client:
+            probe_request = client.get(args.url)
     except Exception as e:
-        sys.exit(f"[!] {e}" if args.verbose else None)
+        sys.exit(logging.info(e))
 
     if re.search(
         "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/captcha/v1", probe_request.text
     ):
-        sys.exit(
-            "[!] Cloudflare returned a CAPTCHA page. Exiting..."
-            if args.verbose
-            else None
-        )
+        sys.exit(logging.info("Cloudflare returned an hCaptcha page."))
 
     if detect_challenge(probe_request.text):
-        if args.verbose:
-            print("[+] Cloudflare challenge detected. Fetching cf_clearance cookie...")
+        logging.info("Cloudflare challenge detected. Fetching cf_clearance cookie...")
     else:
-        sys.exit(
-            "[!] Cloudflare challenge not detected. Exiting..."
-            if args.verbose
-            else None
-        )
+        sys.exit(logging.info("Cloudflare challenge not detected."))
 
     cookies = browser(args)
+
     cookie_value = "".join(
         cookie["value"] for cookie in cookies if cookie["name"] == "cf_clearance"
     )
 
     if not cookie_value:
-        sys.exit(
-            "[!] Failed to retrieve cf_clearance cookie." if args.verbose else None
-        )
+        sys.exit(logging.info("Failed to retrieve cf_clearance cookie."))
 
     cookie = f"cf_clearance={cookie_value}"
 
     if args.verbose:
-        print(f"[+] Cookie: {cookie}")
-    elif not args.verbose:
+        logging.info(f"Cookie: {cookie}")
+    else:
         print(cookie)
 
-    if args.file:
-        if args.verbose:
-            print(f"[+] Writing cf_clearance cookie to {args.file}...")
+    if args.file is not None:
+        logging.info(f"Writing cf_clearance cookie to {args.file}...")
 
         with open(args.file, "a") as file:
             file.write(f"{cookie}\n")
