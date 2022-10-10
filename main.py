@@ -5,8 +5,7 @@ import sys
 from typing import Any, Dict, List
 
 import httpx
-from playwright._impl._api_types import TimeoutError
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import Page, sync_playwright
 
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 6.2; Win64; x64) AppleWebKit/605.1.15 (KHTML, like Gecko)"
@@ -38,6 +37,19 @@ def parse_proxy(proxy: str) -> Dict[str, str]:
     return proxy_dict
 
 
+def solve_challenge(page: Page) -> None:
+    verify_button_text = "Verify (I am|you are) (not a bot|(a )?human)"
+    verify_button = page.locator(f"text=/{verify_button_text}/")
+
+    while detect_challenge(page.content()):
+        page.wait_for_load_state("networkidle")
+
+        if re.search(verify_button_text, page.content()):
+            verify_button.click()
+        else:
+            page.reload()
+
+
 def browser(args: argparse.Namespace) -> List[Dict[str, Any]]:
     with sync_playwright() as p:
         logging.info("Launching headless browser...")
@@ -48,21 +60,17 @@ def browser(args: argparse.Namespace) -> List[Dict[str, Any]]:
             browser = p.webkit.launch(headless=True)
 
         ms_timeout = args.timeout * 1000
+        context = browser.new_context(user_agent=USER_AGENT)
+        context.set_default_timeout(ms_timeout)
+        page = context.new_page()
+
+        logging.info(f"Going to {args.url}...")
 
         try:
-            context = browser.new_context(user_agent=USER_AGENT)
-            context.set_default_timeout(ms_timeout)
-            page = context.new_page()
-
-            logging.info(f"Going to {args.url}...")
-
             page.goto(args.url)
         except Exception as e:
             parsed_error = "{}".format(str(e).split("\n")[0])
             sys.exit(logging.info(parsed_error))
-
-        verify_button_text = "Verify (I am|you are) (not a bot|(a )?human)"
-        verify_button = page.locator(f"text=/{verify_button_text}/")
 
         if re.search(
             "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/managed/v1",
@@ -75,14 +83,8 @@ def browser(args: argparse.Namespace) -> List[Dict[str, Any]]:
             logging.info("Solving cloudflare challenge [JavaScript]...")
 
         try:
-            while detect_challenge(page.content()):
-                page.wait_for_load_state("networkidle")
-
-                if re.search(verify_button_text, page.content()):
-                    verify_button.click()
-                else:
-                    page.reload()
-        except TimeoutError:
+            solve_challenge(page)
+        except Exception:
             pass
 
         return page.context.cookies()
@@ -176,10 +178,9 @@ def main() -> None:
         sys.exit(logging.info("Failed to retrieve cf_clearance cookie."))
 
     cookie = f"cf_clearance={cookie_value}"
+    logging.info(f"Cookie: {cookie}")
 
-    if args.verbose:
-        logging.info(f"Cookie: {cookie}")
-    else:
+    if not args.verbose:
         print(cookie)
 
     if args.file is not None:
