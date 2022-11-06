@@ -5,7 +5,9 @@ import sys
 from typing import Any, Dict, List
 
 import httpx
+from playwright._impl._api_types import Error as PlaywrightError
 from playwright.sync_api import Page, sync_playwright
+from tenacity import retry, retry_if_exception_type
 
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 6.2; Win64; x64) AppleWebKit/605.1.15 (KHTML, like Gecko)"
@@ -37,40 +39,51 @@ def parse_proxy(proxy: str) -> Dict[str, str]:
     return proxy_dict
 
 
+@retry(retry=retry_if_exception_type(PlaywrightError))
+def ensure_html(page: Page) -> str:
+    return page.content()
+
+
 def solve_challenge(page: Page) -> None:
-    verify_button_text = "Verify (I am|you are) (not a bot|(a )?human)"
-    verify_button = page.locator(f"text=/{verify_button_text}/")
+    verify_button = page.locator("text=/Verify (I am|you are) (not a bot|(a )?human)/")
+    spinner = page.locator("#challenge-spinner")
 
-    while detect_challenge(page.content()):
-        page.wait_for_load_state("networkidle")
+    while detect_challenge(ensure_html(page)):
+        if spinner.is_visible():
+            spinner.wait_for(state="hidden")
 
-        if re.search(verify_button_text, page.content()):
+        challenge_stage = page.query_selector("div#challenge-stage")
+        captcha_box = page.query_selector("div.hcaptcha-box")
+
+        if verify_button.is_visible():
             verify_button.click()
-        else:
+            challenge_stage.wait_for_element_state("hidden")
+        elif captcha_box is not None:
             page.reload()
 
 
-def browser(args: argparse.Namespace) -> List[Dict[str, Any]]:
-    with sync_playwright() as p:
+def get_cookies(args: argparse.Namespace) -> List[Dict[str, Any]]:
+    with sync_playwright() as playwright:
         logging.info("Launching headless browser...")
 
         if args.proxy is not None:
-            browser = p.webkit.launch(headless=True, proxy=parse_proxy(args.proxy))
+            browser = playwright.webkit.launch(
+                headless=True, proxy=parse_proxy(args.proxy)
+            )
         else:
-            browser = p.webkit.launch(headless=True)
+            browser = playwright.webkit.launch(headless=True)
 
         ms_timeout = args.timeout * 1000
         context = browser.new_context(user_agent=USER_AGENT)
         context.set_default_timeout(ms_timeout)
         page = context.new_page()
 
-        logging.info(f"Going to {args.url}...")
+        logging.info("Going to %s...", args.url)
 
         try:
             page.goto(args.url)
-        except Exception as e:
-            parsed_error = "{}".format(str(e).split("\n")[0])
-            sys.exit(logging.info(parsed_error))
+        except PlaywrightError as err:
+            sys.exit(logging.info(err.message))
 
         if re.search(
             "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/managed/v1",
@@ -84,10 +97,10 @@ def browser(args: argparse.Namespace) -> List[Dict[str, Any]]:
 
         try:
             solve_challenge(page)
-        except Exception:
+        except PlaywrightError:
             pass
 
-        return page.context.cookies()
+        return context.cookies()
 
 
 def main() -> None:
@@ -155,8 +168,8 @@ def main() -> None:
             proxies=args.proxy,
         ) as client:
             probe_request = client.get(args.url)
-    except Exception as e:
-        sys.exit(logging.info(e))
+    except httpx.HTTPError as err:
+        sys.exit(logging.info(err))
 
     if re.search(
         "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/captcha/v1", probe_request.text
@@ -168,7 +181,7 @@ def main() -> None:
     else:
         sys.exit(logging.info("Cloudflare challenge not detected."))
 
-    cookies = browser(args)
+    cookies = get_cookies(args)
 
     cookie_value = "".join(
         cookie["value"] for cookie in cookies if cookie["name"] == "cf_clearance"
@@ -178,15 +191,15 @@ def main() -> None:
         sys.exit(logging.info("Failed to retrieve cf_clearance cookie."))
 
     cookie = f"cf_clearance={cookie_value}"
-    logging.info(f"Cookie: {cookie}")
+    logging.info("Cookie: %s", cookie)
 
     if not args.verbose:
         print(cookie)
 
     if args.file is not None:
-        logging.info(f"Writing cf_clearance cookie to {args.file}...")
+        logging.info("Writing cf_clearance cookie to %s...", args.file)
 
-        with open(args.file, "a") as file:
+        with open(args.file, "a", encoding="utf-8") as file:
             file.write(f"{cookie}\n")
 
 
