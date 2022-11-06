@@ -7,20 +7,25 @@ from typing import Any, Dict, List
 import httpx
 from playwright._impl._api_types import Error as PlaywrightError
 from playwright.sync_api import Page, sync_playwright
-from tenacity import retry, retry_if_exception_type
+from tenacity import retry
 
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 6.2; Win64; x64) AppleWebKit/605.1.15 (KHTML, like Gecko)"
 )
 
 
+@retry
+def ensure_html_fetch(page: Page) -> str:
+    return page.content()
+
+
 def detect_challenge(html: str) -> bool:
-    challenge_html = (
+    challenge_uri_paths = (
         "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/managed/v1",
         "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/jsch/v1",
     )
 
-    return any(re.search(x, html) for x in challenge_html)
+    return any(re.search(uri_path, html) for uri_path in challenge_uri_paths)
 
 
 def parse_proxy(proxy: str) -> Dict[str, str]:
@@ -39,16 +44,12 @@ def parse_proxy(proxy: str) -> Dict[str, str]:
     return proxy_dict
 
 
-@retry(retry=retry_if_exception_type(PlaywrightError))
-def ensure_html(page: Page) -> str:
-    return page.content()
-
-
 def solve_challenge(page: Page) -> None:
-    verify_button = page.locator("text=/Verify (I am|you are) (not a bot|(a )?human)/")
+    verify_button_pattern = re.compile("Verify (I am|you are) (not a bot|(a )?human)")
+    verify_button = page.get_by_role("button", name=verify_button_pattern)
     spinner = page.locator("#challenge-spinner")
 
-    while detect_challenge(ensure_html(page)):
+    while detect_challenge(ensure_html_fetch(page)):
         if spinner.is_visible():
             spinner.wait_for(state="hidden")
 
@@ -83,7 +84,7 @@ def get_cookies(args: argparse.Namespace) -> List[Dict[str, Any]]:
         try:
             page.goto(args.url)
         except PlaywrightError as err:
-            sys.exit(logging.info(err.message))
+            sys.exit(logging.info(err))
 
         if re.search(
             "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/managed/v1",
@@ -148,6 +149,8 @@ def main() -> None:
             level=logging.INFO,
         )
 
+    logging.info("Checking for cloudflare challenge...")
+
     headers = {
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
         "Accept-Encoding": "gzip, deflate, br",
@@ -156,8 +159,6 @@ def main() -> None:
         "Upgrade-Insecure-Requests": "1",
         "User-Agent": USER_AGENT,
     }
-
-    logging.info("Checking for cloudflare challenge...")
 
     try:
         with httpx.Client(
