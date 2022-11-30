@@ -259,7 +259,7 @@ def main() -> None:
 
     if args.verbose:
         logging.basicConfig(
-            format="[%(asctime)s] %(message)s",
+            format="[%(asctime)s] [%(levelname)s] %(message)s",
             datefmt="%H:%M:%S",
             level=logging.INFO,
         )
@@ -288,6 +288,8 @@ def main() -> None:
 
     if not args.verbose:
         print(clearance_cookie)
+
+    logging.info("User agent: %s", args.user_agent)
 
     if args.file is not None:
         logging.info("Writing cf_clearance cookie to %s...", args.file)
