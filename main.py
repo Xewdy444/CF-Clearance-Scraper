@@ -9,10 +9,6 @@ from typing import Any, Dict, List, Optional
 from playwright._impl._api_types import Error as PlaywrightError
 from playwright.sync_api import sync_playwright
 
-USER_AGENT = (
-    "Mozilla/5.0 (Windows NT 6.2; Win64; x64) AppleWebKit/605.1.15 (KHTML, like Gecko)"
-)
-
 
 class Scraper:
     """
@@ -20,32 +16,31 @@ class Scraper:
 
     Parameters
     ----------
-    url : str
-        URL to scrape cookies from.
+    user_agent : str
+        User agent to use for requests.
     timeout : int
         Timeout in seconds.
     debug : bool
         Whether to run the browser in headed mode.
     proxy : Optional[str]
-        Proxy to use.
+        Proxy to use for requests.
 
     Methods
     -------
     parse_clearance_cookie(cookies: List[Dict[str, Any]]) -> Optional[str]
         Parse the cf_clearance cookie from a list of cookies.
-    get_cookies() -> Optional[List[Dict[str, Any]]]
+    get_cookies(self, url: str) -> Optional[List[Dict[str, Any]]]
         Solve the cloudflare challenge and get cookies from the page.
     """
 
     def __init__(
         self,
-        url: str,
         *,
+        user_agent: str,
         timeout: int,
         debug: bool,
         proxy: Optional[str],
     ) -> None:
-        self.url = url
         self._playwright = sync_playwright().start()
 
         if proxy is None:
@@ -55,7 +50,7 @@ class Scraper:
                 headless=not debug, proxy=self._parse_proxy(proxy)
             )
 
-        context = browser.new_context(user_agent=USER_AGENT)
+        context = browser.new_context(user_agent=user_agent)
         context.set_default_timeout(timeout * 1000)
         self._page = context.new_page()
 
@@ -169,9 +164,14 @@ class Scraper:
 
         return f"cf_clearance={cookie_value}"
 
-    def get_cookies(self) -> Optional[List[Dict[str, Any]]]:
+    def get_cookies(self, url: str) -> Optional[List[Dict[str, Any]]]:
         """
         Solve the cloudflare challenge and get cookies from the page.
+
+        Parameters
+        ----------
+        url : str
+            URL to scrape cookies from.
 
         Returns
         -------
@@ -179,7 +179,7 @@ class Scraper:
             List of cookies.
         """
         try:
-            self._page.goto(self.url)
+            self._page.goto(url)
         except PlaywrightError as err:
             logging.error(err)
             return None
@@ -247,6 +247,13 @@ def main() -> None:
         type=str,
         default=None,
     )
+    parser.add_argument(
+        "-ua",
+        "--user-agent",
+        help="User agent to use for requests",
+        type=str,
+        default="Mozilla/5.0 (Windows NT 6.2; Win64; x64) AppleWebKit/605.1.15 (KHTML, like Gecko)",
+    )
 
     args = parser.parse_args()
 
@@ -260,10 +267,13 @@ def main() -> None:
     logging.info("Launching %s browser...", "headless" if not args.debug else "headed")
 
     with Scraper(
-        args.url, timeout=args.timeout, debug=args.debug, proxy=args.proxy
+        user_agent=args.user_agent,
+        timeout=args.timeout,
+        debug=args.debug,
+        proxy=args.proxy,
     ) as scraper:
         logging.info("Going to %s...", args.url)
-        cookies = scraper.get_cookies()
+        cookies = scraper.get_cookies(args.url)
 
         if cookies is None:
             sys.exit(1)
