@@ -83,15 +83,15 @@ class Scraper:
             proxy_regex = re.match("(.+)://(.+):(.+)@(.+)", proxy)
             server = f"{proxy_regex.group(1)}://{proxy_regex.group(4)}"
 
-            proxy_dict = {
+            proxy_params = {
                 "server": server,
                 "username": proxy_regex.group(2),
                 "password": proxy_regex.group(3),
             }
         else:
-            proxy_dict = {"server": proxy}
+            proxy_params = {"server": proxy}
 
-        return proxy_dict
+        return proxy_params
 
     def _detect_challenge(self) -> bool:
         """
@@ -135,17 +135,16 @@ class Scraper:
             if verify_button.is_visible():
                 verify_button.click()
                 challenge_stage.wait_for_element_state("hidden")
-            else:
-                if any(
-                    frame.url.startswith(
-                        (
-                            "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/b/turnstile",
-                            "https://cf-assets.hcaptcha.com/captcha/v1",
-                        )
+            elif any(
+                frame.url.startswith(
+                    (
+                        "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/b/turnstile",
+                        "https://cf-assets.hcaptcha.com/captcha/v1",
                     )
-                    for frame in self._page.frames
-                ):
-                    self._page.reload()
+                )
+                for frame in self._page.frames
+            ):
+                self._page.reload()
 
     @staticmethod
     def parse_clearance_cookie(cookies: List[Dict[str, Any]]) -> Optional[str]:
