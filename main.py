@@ -1,107 +1,214 @@
+from __future__ import annotations
+
 import argparse
 import logging
 import re
 import sys
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
-import httpx
 from playwright._impl._api_types import Error as PlaywrightError
-from playwright.sync_api import Page, sync_playwright
-from tenacity import retry
+from playwright.sync_api import sync_playwright
 
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 6.2; Win64; x64) AppleWebKit/605.1.15 (KHTML, like Gecko)"
 )
 
 
-@retry
-def ensure_html_fetch(page: Page) -> str:
-    return page.content()
+class Scraper:
+    """
+    Cookie scraper class.
 
+    Parameters
+    ----------
+    url : str
+        URL to scrape cookies from.
+    timeout : int
+        Timeout in seconds.
+    debug : bool
+        Whether to run the browser in headed mode.
+    proxy : Optional[str]
+        Proxy to use.
 
-def detect_challenge(html: str) -> bool:
-    challenge_uri_paths = (
-        "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/managed/v1",
-        "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/jsch/v1",
-    )
+    Methods
+    -------
+    parse_clearance_cookie(cookies: List[Dict[str, Any]]) -> Optional[str]
+        Parse the cf_clearance cookie from a list of cookies.
+    get_cookies() -> Optional[List[Dict[str, Any]]]
+        Solve the cloudflare challenge and get cookies from the page.
+    """
 
-    return any(re.search(uri_path, html) for uri_path in challenge_uri_paths)
+    def __init__(
+        self,
+        url: str,
+        *,
+        timeout: int,
+        debug: bool,
+        proxy: Optional[str],
+    ) -> None:
+        self.url = url
+        self._playwright = sync_playwright().start()
 
-
-def parse_proxy(proxy: str) -> Dict[str, str]:
-    if "@" in proxy:
-        proxy_regex = re.match("(.+)://(.+):(.+)@(.+)", proxy)
-        server = f"{proxy_regex.group(1)}://{proxy_regex.group(4)}"
-
-        proxy_dict = {
-            "server": server,
-            "username": proxy_regex.group(2),
-            "password": proxy_regex.group(3),
-        }
-    else:
-        proxy_dict = {"server": proxy}
-
-    return proxy_dict
-
-
-def solve_challenge(page: Page) -> None:
-    verify_button_pattern = re.compile("Verify (I am|you are) (not a bot|(a )?human)")
-    verify_button = page.get_by_role("button", name=verify_button_pattern)
-    spinner = page.locator("#challenge-spinner")
-
-    while detect_challenge(ensure_html_fetch(page)):
-        if spinner.is_visible():
-            spinner.wait_for(state="hidden")
-
-        challenge_stage = page.query_selector("div#challenge-stage")
-        captcha_box = page.query_selector("div.hcaptcha-box")
-
-        if verify_button.is_visible():
-            verify_button.click()
-            challenge_stage.wait_for_element_state("hidden")
-        elif captcha_box is not None:
-            page.reload()
-
-
-def get_cookies(args: argparse.Namespace) -> List[Dict[str, Any]]:
-    with sync_playwright() as playwright:
-        logging.info("Launching headless browser...")
-
-        if args.proxy is not None:
-            browser = playwright.webkit.launch(
-                headless=True, proxy=parse_proxy(args.proxy)
-            )
+        if proxy is None:
+            browser = self._playwright.webkit.launch(headless=not debug)
         else:
-            browser = playwright.webkit.launch(headless=True)
+            browser = self._playwright.webkit.launch(
+                headless=not debug, proxy=self._parse_proxy(proxy)
+            )
 
-        ms_timeout = args.timeout * 1000
         context = browser.new_context(user_agent=USER_AGENT)
-        context.set_default_timeout(ms_timeout)
-        page = context.new_page()
+        context.set_default_timeout(timeout * 1000)
+        self._page = context.new_page()
 
-        logging.info("Going to %s...", args.url)
+    def __enter__(self) -> Scraper:
+        return self
 
-        try:
-            page.goto(args.url)
-        except PlaywrightError as err:
-            sys.exit(logging.info(err))
+    def __exit__(self, *args: Any) -> None:
+        self._playwright.stop()
 
-        if re.search(
+    def _parse_proxy(self, proxy: str) -> Dict[str, str]:
+        """
+        Parse proxy string into a dictionary.
+
+        Parameters
+        ----------
+        proxy : str
+            Proxy string.
+
+        Returns
+        -------
+        Dict[str, str]
+            Dictionary of proxy parameters.
+        """
+        if "@" in proxy:
+            proxy_regex = re.match("(.+)://(.+):(.+)@(.+)", proxy)
+            server = f"{proxy_regex.group(1)}://{proxy_regex.group(4)}"
+
+            proxy_dict = {
+                "server": server,
+                "username": proxy_regex.group(2),
+                "password": proxy_regex.group(3),
+            }
+        else:
+            proxy_dict = {"server": proxy}
+
+        return proxy_dict
+
+    def _detect_challenge(self) -> bool:
+        """
+        Detect if the page is a cloudflare challenge.
+
+        Parameters
+        ----------
+        html : str
+            HTML of the page.
+
+        Returns
+        -------
+        bool
+            True if the page is a cloudflare challenge, False otherwise.
+        """
+        challenge_uri_paths = (
             "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/managed/v1",
-            page.content(),
+            "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/jsch/v1",
+        )
+
+        return any(
+            re.search(uri_path, self._page.content())
+            for uri_path in challenge_uri_paths
+        )
+
+    def _solve_challenge(self) -> None:
+        """Solve the cloudflare challenge."""
+        verify_button_pattern = re.compile(
+            "Verify (I am|you are) (not a bot|(a )?human)"
+        )
+
+        verify_button = self._page.get_by_role("button", name=verify_button_pattern)
+        spinner = self._page.locator("#challenge-spinner")
+
+        while self._detect_challenge():
+            if spinner.is_visible():
+                spinner.wait_for(state="hidden")
+
+            challenge_stage = self._page.query_selector("div#challenge-stage")
+
+            if verify_button.is_visible():
+                verify_button.click()
+                challenge_stage.wait_for_element_state("hidden")
+            else:
+                if any(
+                    frame.url.startswith(
+                        (
+                            "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/b/turnstile",
+                            "https://cf-assets.hcaptcha.com/captcha/v1",
+                        )
+                    )
+                    for frame in self._page.frames
+                ):
+                    self._page.reload()
+
+    @staticmethod
+    def parse_clearance_cookie(cookies: List[Dict[str, Any]]) -> Optional[str]:
+        """
+        Parse the cf_clearance cookie from a list of cookies.
+
+        Parameters
+        ----------
+        cookies : List[Dict[str, Any]]
+            List of cookies.
+
+        Returns
+        -------
+        Optional[str]
+            cf_clearance cookie.
+        """
+        cookie_value = "".join(
+            cookie["value"] for cookie in cookies if cookie["name"] == "cf_clearance"
+        )
+
+        if not cookie_value:
+            return None
+
+        return f"cf_clearance={cookie_value}"
+
+    def get_cookies(self) -> Optional[List[Dict[str, Any]]]:
+        """
+        Solve the cloudflare challenge and get cookies from the page.
+
+        Returns
+        -------
+        Optional[List[Dict[str, Any]]]
+            List of cookies.
+        """
+        try:
+            self._page.goto(self.url)
+        except PlaywrightError as err:
+            logging.error(err)
+            return None
+
+        html = self._page.content()
+
+        if re.search("/cdn-cgi/challenge-platform/h/[bg]/orchestrate/jsch/v1", html):
+            logging.info("Solving cloudflare challenge [JavaScript]...")
+        elif re.search(
+            "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/managed/v1", html
         ):
             logging.info("Solving cloudflare challenge [Managed]...")
         elif re.search(
-            "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/jsch/v1", page.content()
+            "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/captcha/v1", html
         ):
-            logging.info("Solving cloudflare challenge [JavaScript]...")
+            logging.error("Cloudflare returned an hCaptcha page.")
+            return None
+        else:
+            logging.error("No cloudflare challenge detected.")
+            return None
 
         try:
-            solve_challenge(page)
+            self._solve_challenge()
         except PlaywrightError:
             pass
 
-        return context.cookies()
+        return self._page.context.cookies()
 
 
 def main() -> None:
@@ -112,11 +219,13 @@ def main() -> None:
         "-v", "--verbose", help="Increase output verbosity", action="store_true"
     )
     parser.add_argument(
+        "-d", "--debug", help="Run the browser in headed mode", action="store_true"
+    )
+    parser.add_argument(
         "-u",
         "--url",
         help="URL to fetch cf_clearance cookie from",
         type=str,
-        default=None,
         required=True,
     )
     parser.add_argument(
@@ -136,10 +245,11 @@ def main() -> None:
     parser.add_argument(
         "-p",
         "--proxy",
-        help="Proxy server to use for requests (SOCKS5 proxy authentication not supported). Example: socks5://172.66.43.144:1080 or http://username:password@172.66.43.144:1080",
+        help="Proxy server to use for requests (SOCKS5 proxy authentication not supported)",
         type=str,
         default=None,
     )
+
     args = parser.parse_args()
 
     if args.verbose:
@@ -149,59 +259,33 @@ def main() -> None:
             level=logging.INFO,
         )
 
-    logging.info("Checking for cloudflare challenge...")
+    logging.info("Launching %s browser...", "headless" if not args.debug else "headed")
 
-    headers = {
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Accept-Language": "en-US,en;q=0.5",
-        "Connection": "keep-alive",
-        "Upgrade-Insecure-Requests": "1",
-        "User-Agent": USER_AGENT,
-    }
+    with Scraper(
+        args.url, timeout=args.timeout, debug=args.debug, proxy=args.proxy
+    ) as scraper:
+        logging.info("Going to %s...", args.url)
+        cookies = scraper.get_cookies()
 
-    try:
-        with httpx.Client(
-            http2=True,
-            follow_redirects=True,
-            headers=headers,
-            timeout=args.timeout,
-            proxies=args.proxy,
-        ) as client:
-            probe_request = client.get(args.url)
-    except httpx.HTTPError as err:
-        sys.exit(logging.info(err))
+        if cookies is None:
+            sys.exit(1)
 
-    if re.search(
-        "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/captcha/v1", probe_request.text
-    ):
-        sys.exit(logging.info("Cloudflare returned an hCaptcha page."))
+        clearance_cookie = scraper.parse_clearance_cookie(cookies)
 
-    if detect_challenge(probe_request.text):
-        logging.info("Cloudflare challenge detected. Fetching cf_clearance cookie...")
-    else:
-        sys.exit(logging.info("Cloudflare challenge not detected."))
+    if not clearance_cookie:
+        logging.error("Failed to retrieve cf_clearance cookie.")
+        sys.exit(1)
 
-    cookies = get_cookies(args)
-
-    cookie_value = "".join(
-        cookie["value"] for cookie in cookies if cookie["name"] == "cf_clearance"
-    )
-
-    if not cookie_value:
-        sys.exit(logging.info("Failed to retrieve cf_clearance cookie."))
-
-    cookie = f"cf_clearance={cookie_value}"
-    logging.info("Cookie: %s", cookie)
+    logging.info("Cookie: %s", clearance_cookie)
 
     if not args.verbose:
-        print(cookie)
+        print(clearance_cookie)
 
     if args.file is not None:
         logging.info("Writing cf_clearance cookie to %s...", args.file)
 
         with open(args.file, "a", encoding="utf-8") as file:
-            file.write(f"{cookie}\n")
+            file.write(f"{clearance_cookie}\n")
 
 
 if __name__ == "__main__":
