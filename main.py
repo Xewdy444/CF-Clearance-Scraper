@@ -136,11 +136,10 @@ class Scraper:
                 verify_button.click()
                 challenge_stage.wait_for_element_state("hidden")
             elif any(
-                frame.url.startswith(
-                    (
-                        "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/b/turnstile",
-                        "https://cf-assets.hcaptcha.com/captcha/v1",
-                    )
+                re.match(uri_path, frame.url)
+                for uri_path in (
+                    "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/[bg]/turnstile",
+                    "https://cf-assets.hcaptcha.com/captcha/v1",
                 )
                 for frame in self._page.frames
             ):

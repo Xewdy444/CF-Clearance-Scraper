@@ -6,7 +6,7 @@ A simple program for fetching cf_clearance cookies from websites issuing cloudfl
 In order to bypass cloudflare challenges with the clearance cookies, you must make sure of two things:
 
 - The user agent used to fetch the clearance cookie must match the user agent being used within the requests that use the clearance cookie
-    > **Note**:
+    > **Note**
     > You can edit the user agent used by the scraper by changing the `USER_AGENT` variable. Depending on the user agent used, it may affect your ability to solve the cloudflare challenge
 - The IP address used to fetch the clearance cookie must match the IP address being used to make the requests that use the clearance cookie
 
