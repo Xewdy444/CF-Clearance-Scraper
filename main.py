@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import re
-import sys
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from playwright._impl._api_types import Error as PlaywrightError
@@ -29,7 +30,7 @@ class Scraper:
     -------
     parse_clearance_cookie(cookies: List[Dict[str, Any]]) -> Optional[str]
         Parse the cf_clearance cookie from a list of cookies.
-    get_cookies(self, url: str) -> Optional[List[Dict[str, Any]]]
+    get_cookies(url: str) -> Optional[List[Dict[str, Any]]]
         Solve the cloudflare challenge and get cookies from the page.
     """
 
@@ -211,7 +212,7 @@ class Scraper:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Fetches cf_clearance cookies from websites issuing cloudflare challenges to users"
+        description="Fetches cf_clearance cookies from websites issuing cloudflare challenges to visitors"
     )
     parser.add_argument(
         "-v", "--verbose", help="Increase output verbosity", action="store_true"
@@ -229,7 +230,7 @@ def main() -> None:
     parser.add_argument(
         "-f",
         "--file",
-        help="File to write the cf_clearance cookie to",
+        help="File to write the cf_clearance cookie information to (JSON format)",
         type=str,
         default=None,
     )
@@ -276,26 +277,46 @@ def main() -> None:
         cookies = scraper.get_cookies(args.url)
 
         if cookies is None:
-            sys.exit(1)
+            return
 
         clearance_cookie = scraper.parse_clearance_cookie(cookies)
 
     if not clearance_cookie:
         logging.error("Failed to retrieve cf_clearance cookie.")
-        sys.exit(1)
-
-    logging.info("Cookie: %s", clearance_cookie)
+        return
 
     if not args.verbose:
         print(clearance_cookie)
 
+    logging.info("Cookie: %s", clearance_cookie)
     logging.info("User agent: %s", args.user_agent)
 
-    if args.file is not None:
-        logging.info("Writing cf_clearance cookie to %s...", args.file)
+    if args.file is None:
+        return
 
-        with open(args.file, "a", encoding="utf-8") as file:
-            file.write(f"{clearance_cookie}\n")
+    logging.info("Writing cf_clearance cookie information to %s...", args.file)
+
+    with open(args.file, encoding="utf-8") as file:
+        try:
+            json_data = json.load(file)
+        except json.JSONDecodeError:
+            json_data = {"cookies": []}
+
+    json_data["cookies"].append(
+        {
+            "timestamp": datetime.now().isoformat(),
+            "cf_clearance": clearance_cookie[13:],
+            "user_agent": args.user_agent,
+            "proxy": args.proxy,
+        }
+    )
+
+    with open(args.file, "w", encoding="utf-8") as file:
+        json.dump(
+            json_data,
+            file,
+            indent=4,
+        )
 
 
 if __name__ == "__main__":
