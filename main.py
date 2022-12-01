@@ -296,11 +296,11 @@ def main() -> None:
 
     logging.info("Writing cf_clearance cookie information to %s...", args.file)
 
-    with open(args.file, encoding="utf-8") as file:
-        try:
+    try:
+        with open(args.file, encoding="utf-8") as file:
             json_data = json.load(file)
-        except json.JSONDecodeError:
-            json_data = {"cookies": []}
+    except (FileNotFoundError, json.JSONDecodeError):
+        json_data = {"cookies": []}
 
     json_data["cookies"].append(
         {
