@@ -305,6 +305,7 @@ def main() -> None:
     json_data["cookies"].append(
         {
             "timestamp": datetime.now().isoformat(),
+            "url": args.url,
             "cf_clearance": clearance_cookie[13:],
             "user_agent": args.user_agent,
             "proxy": args.proxy,
@@ -312,11 +313,7 @@ def main() -> None:
     )
 
     with open(args.file, "w", encoding="utf-8") as file:
-        json.dump(
-            json_data,
-            file,
-            indent=4,
-        )
+        json.dump(json_data, file, indent=4)
 
 
 if __name__ == "__main__":
