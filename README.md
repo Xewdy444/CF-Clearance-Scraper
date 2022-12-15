@@ -1,6 +1,6 @@
 # CF-Clearance-Scraper
 
-A simple program for fetching cf_clearance cookies from websites issuing cloudflare challenges to visitors. This program works on JavaScript and managed challenges. 
+A simple program for fetching cf_clearance cookies from websites issuing cloudflare challenges to visitors. This program works on javascript and managed challenges. 
 
 ## Clearance Cookie Usage
 In order to bypass cloudflare challenges with the clearance cookies, you must make sure of two things:

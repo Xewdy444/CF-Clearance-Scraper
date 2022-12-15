@@ -5,10 +5,20 @@ import json
 import logging
 import re
 from datetime import datetime
+from enum import Enum
 from typing import Any, Dict, List, Optional
 
 from playwright._impl._api_types import Error as PlaywrightError
 from playwright.sync_api import sync_playwright
+
+
+class ChallengePlatform(Enum):
+    """Cloudflare challenge platform URI paths."""
+
+    JAVASCRIPT = "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/jsch/v1"
+    MANAGED = "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/managed/v1"
+    HCAPTCHA = "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/captcha/v1"
+    TURNSTILE = "/challenges.cloudflare.com/cdn-cgi/challenge-platform/h/[bg]/turnstile"
 
 
 class Scraper:
@@ -28,7 +38,7 @@ class Scraper:
 
     Methods
     -------
-    parse_clearance_cookie(cookies: List[Dict[str, Any]]) -> Optional[str]
+    parse_clearance_cookie(cookies: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]
         Parse the cf_clearance cookie from a list of cookies.
     get_cookies(url: str) -> Optional[List[Dict[str, Any]]]
         Solve the cloudflare challenge and get cookies from the page.
@@ -68,7 +78,7 @@ class Scraper:
         Parameters
         ----------
         proxy : str
-            Proxy string.
+            Proxy URL string.
 
         Returns
         -------
@@ -103,14 +113,9 @@ class Scraper:
         bool
             True if the page is a cloudflare challenge, False otherwise.
         """
-        challenge_uri_paths = (
-            "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/managed/v1",
-            "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/jsch/v1",
-        )
-
         return any(
             re.search(uri_path, self._page.content())
-            for uri_path in challenge_uri_paths
+            for uri_path in (challenge.value for challenge in ChallengePlatform)
         )
 
     def _solve_challenge(self) -> None:
@@ -132,9 +137,9 @@ class Scraper:
                 verify_button.click()
                 challenge_stage.wait_for_element_state("hidden")
             elif any(
-                re.match(uri_path, frame.url)
-                for uri_path in (
-                    "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/[bg]/turnstile",
+                re.match(url, frame.url)
+                for url in (
+                    f"https:/{ChallengePlatform.TURNSTILE.value}",
                     "https://cf-assets.hcaptcha.com/captcha/v1",
                 )
                 for frame in self._page.frames
@@ -142,7 +147,9 @@ class Scraper:
                 self._page.reload()
 
     @staticmethod
-    def parse_clearance_cookie(cookies: List[Dict[str, Any]]) -> Optional[str]:
+    def parse_clearance_cookie(
+        cookies: List[Dict[str, Any]]
+    ) -> Optional[Dict[str, Any]]:
         """
         Parse the cf_clearance cookie from a list of cookies.
 
@@ -153,17 +160,14 @@ class Scraper:
 
         Returns
         -------
-        Optional[str]
-            cf_clearance cookie.
+        Optional[Dict[str, Any]]
+            cf_clearance cookie dictionary.
         """
-        cookie_value = "".join(
-            cookie["value"] for cookie in cookies if cookie["name"] == "cf_clearance"
-        )
+        for cookie in cookies:
+            if cookie["name"] == "cf_clearance":
+                return cookie
 
-        if not cookie_value:
-            return None
-
-        return f"cf_clearance={cookie_value}"
+        return None
 
     def get_cookies(self, url: str) -> Optional[List[Dict[str, Any]]]:
         """
@@ -187,15 +191,11 @@ class Scraper:
 
         html = self._page.content()
 
-        if re.search("/cdn-cgi/challenge-platform/h/[bg]/orchestrate/jsch/v1", html):
+        if re.search(ChallengePlatform.JAVASCRIPT.value, html):
             logging.info("Solving cloudflare challenge [JavaScript]...")
-        elif re.search(
-            "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/managed/v1", html
-        ):
+        elif re.search(ChallengePlatform.MANAGED.value, html):
             logging.info("Solving cloudflare challenge [Managed]...")
-        elif re.search(
-            "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/captcha/v1", html
-        ):
+        elif re.search(ChallengePlatform.HCAPTCHA.value, html):
             logging.error("Cloudflare returned an hCaptcha page.")
             return None
         else:
@@ -286,9 +286,9 @@ def main() -> None:
         return
 
     if not args.verbose:
-        print(clearance_cookie)
+        print(clearance_cookie["value"])
 
-    logging.info("Cookie: %s", clearance_cookie)
+    logging.info("Cookie: cf_clearance=%s", clearance_cookie["value"])
     logging.info("User agent: %s", args.user_agent)
 
     if args.file is None:
@@ -300,13 +300,16 @@ def main() -> None:
         with open(args.file, encoding="utf-8") as file:
             json_data = json.load(file)
     except (FileNotFoundError, json.JSONDecodeError):
-        json_data = {"cookies": []}
+        json_data = {"clearance_cookies": []}
 
-    json_data["cookies"].append(
+    # Get the timestamp using the cookie's expiration date minus one year
+    timestamp = datetime.utcfromtimestamp(clearance_cookie["expires"] - 31557600)
+
+    json_data["clearance_cookies"].append(
         {
-            "timestamp": datetime.now().isoformat(),
-            "url": args.url,
-            "cf_clearance": clearance_cookie[13:],
+            "timestamp": timestamp.isoformat(),
+            "domain": clearance_cookie["domain"],
+            "cf_clearance": clearance_cookie["value"],
             "user_agent": args.user_agent,
             "proxy": args.proxy,
         }
