@@ -18,7 +18,6 @@ class ChallengePlatform(Enum):
     JAVASCRIPT = "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/jsch/v1"
     MANAGED = "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/managed/v1"
     HCAPTCHA = "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/captcha/v1"
-    TURNSTILE = "/challenges.cloudflare.com/cdn-cgi/challenge-platform/h/[bg]/turnstile"
 
 
 class Scraper:
@@ -139,7 +138,7 @@ class Scraper:
             elif any(
                 re.match(url, frame.url)
                 for url in (
-                    f"https:/{ChallengePlatform.TURNSTILE.value}",
+                    "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/[bg]/turnstile",
                     "https://cf-assets.hcaptcha.com/captcha/v1",
                 )
                 for frame in self._page.frames
