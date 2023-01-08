@@ -11,6 +11,8 @@ from typing import Any, Dict, List, Optional
 from playwright._impl._api_types import Error as PlaywrightError
 from playwright.sync_api import sync_playwright
 
+Cookies = List[Dict[str, Any]]
+
 
 class ChallengePlatform(Enum):
     """Cloudflare challenge platform URI paths."""
@@ -37,9 +39,9 @@ class Scraper:
 
     Methods
     -------
-    parse_clearance_cookie(cookies: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]
+    parse_clearance_cookie(cookies: Cookies) -> Optional[Dict[str, Any]]
         Parse the cf_clearance cookie from a list of cookies.
-    get_cookies(url: str) -> Optional[List[Dict[str, Any]]]
+    get_cookies(url: str) -> Optional[Cookies]
         Solve the cloudflare challenge and get cookies from the page.
     """
 
@@ -146,15 +148,13 @@ class Scraper:
                 self._page.reload()
 
     @staticmethod
-    def parse_clearance_cookie(
-        cookies: List[Dict[str, Any]]
-    ) -> Optional[Dict[str, Any]]:
+    def parse_clearance_cookie(cookies: Cookies) -> Optional[Dict[str, Any]]:
         """
         Parse the cf_clearance cookie from a list of cookies.
 
         Parameters
         ----------
-        cookies : List[Dict[str, Any]]
+        cookies : Cookies
             List of cookies.
 
         Returns
@@ -168,7 +168,7 @@ class Scraper:
 
         return None
 
-    def get_cookies(self, url: str) -> Optional[List[Dict[str, Any]]]:
+    def get_cookies(self, url: str) -> Optional[Cookies]:
         """
         Solve the cloudflare challenge and get cookies from the page.
 
@@ -179,7 +179,7 @@ class Scraper:
 
         Returns
         -------
-        Optional[List[Dict[str, Any]]]
+        Optional[Cookies]
             List of cookies.
         """
         try:
