@@ -55,13 +55,10 @@ class Scraper:
     ) -> None:
         self._playwright = sync_playwright().start()
 
-        if proxy is None:
-            browser = self._playwright.webkit.launch(headless=not debug)
-        else:
-            browser = self._playwright.webkit.launch(
-                headless=not debug, proxy=self._parse_proxy(proxy)
-            )
+        if proxy is not None:
+            proxy = self._parse_proxy(proxy)
 
+        browser = self._playwright.webkit.launch(headless=not debug, proxy=proxy)
         context = browser.new_context(user_agent=user_agent)
         context.set_default_timeout(timeout * 1000)
         self._page = context.new_page()
@@ -72,7 +69,8 @@ class Scraper:
     def __exit__(self, *args: Any) -> None:
         self._playwright.stop()
 
-    def _parse_proxy(self, proxy: str) -> Dict[str, str]:
+    @staticmethod
+    def _parse_proxy(proxy: str) -> Dict[str, str]:
         """
         Parse proxy string into a dictionary.
 
@@ -126,17 +124,15 @@ class Scraper:
         )
 
         verify_button = self._page.get_by_role("button", name=verify_button_pattern)
-        spinner = self._page.locator("#challenge-spinner")
+        challenge_stage = self._page.locator("div#challenge-stage")
 
-        while self._detect_challenge():
-            if spinner.is_visible():
-                spinner.wait_for(state="hidden")
-
-            challenge_stage = self._page.query_selector("div#challenge-stage")
-
+        while (
+            self.parse_clearance_cookie(self._page.context.cookies()) is None
+            and self._detect_challenge()
+        ):
             if verify_button.is_visible():
                 verify_button.click()
-                challenge_stage.wait_for_element_state("hidden")
+                challenge_stage.wait_for(state="hidden")
             elif any(
                 re.match(url, frame.url)
                 for url in (
@@ -280,7 +276,7 @@ def main() -> None:
 
         clearance_cookie = scraper.parse_clearance_cookie(cookies)
 
-    if not clearance_cookie:
+    if clearance_cookie is None:
         logging.error("Failed to retrieve cf_clearance cookie.")
         return
 
