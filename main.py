@@ -124,15 +124,17 @@ class Scraper:
         )
 
         verify_button = self._page.get_by_role("button", name=verify_button_pattern)
-        challenge_stage = self._page.locator("div#challenge-stage")
+        challenge_spinner = self._page.locator("#challenge-spinner")
 
         while (
             self.parse_clearance_cookie(self._page.context.cookies()) is None
             and self._detect_challenge()
         ):
+            if challenge_spinner.is_visible():
+                challenge_spinner.wait_for(state="hidden")
+
             if verify_button.is_visible():
-                verify_button.click()
-                challenge_stage.wait_for(state="hidden")
+                verify_button.click(force=True, no_wait_after=True)
             elif any(
                 re.match(url, frame.url)
                 for url in (
@@ -199,8 +201,8 @@ class Scraper:
 
         try:
             self._solve_challenge()
-        except PlaywrightError:
-            pass
+        except PlaywrightError as err:
+            logging.error(err)
 
         return self._page.context.cookies()
 
