@@ -299,12 +299,14 @@ def main() -> None:
     except (FileNotFoundError, json.JSONDecodeError):
         json_data = {"clearance_cookies": []}
 
-    # Get the timestamp using the cookie's expiration date minus one year
-    timestamp = datetime.utcfromtimestamp(clearance_cookie["expires"] - 31557600)
+    # Get the unix timestamp using the cookie's expiration date minus one year
+    unix_timestamp = clearance_cookie["expires"] - 31557600
+    timestamp = datetime.utcfromtimestamp(unix_timestamp).isoformat()
 
     json_data["clearance_cookies"].append(
         {
-            "timestamp": timestamp.isoformat(),
+            "unix_timestamp": unix_timestamp,
+            "timestamp": timestamp,
             "domain": clearance_cookie["domain"],
             "cf_clearance": clearance_cookie["value"],
             "user_agent": args.user_agent,
