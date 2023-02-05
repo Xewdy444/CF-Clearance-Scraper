@@ -125,6 +125,7 @@ class Scraper:
 
         verify_button = self._page.get_by_role("button", name=verify_button_pattern)
         challenge_spinner = self._page.locator("#challenge-spinner")
+        challenge_stage = self._page.locator("div#challenge-stage")
 
         while (
             self.parse_clearance_cookie(self._page.context.cookies()) is None
@@ -134,7 +135,8 @@ class Scraper:
                 challenge_spinner.wait_for(state="hidden")
 
             if verify_button.is_visible():
-                verify_button.click(force=True)
+                verify_button.click()
+                challenge_stage.wait_for(state="hidden")
             elif any(
                 re.match(url, frame.url)
                 for url in (
