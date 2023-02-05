@@ -1,9 +1,9 @@
 # CF-Clearance-Scraper
 
-A simple program for fetching cf_clearance cookies from websites issuing cloudflare challenges to visitors. This program works on javascript and managed challenges. 
+A simple program for scraping Cloudflare clearance (cf_clearance) cookies from websites issuing Cloudflare challenges to visitors. This program works on JavaScript and managed challenges.
 
 ## Clearance Cookie Usage
-In order to bypass cloudflare challenges with the clearance cookies, you must make sure of two things:
+In order to bypass Cloudflare challenges with the clearance cookies, you must make sure of two things:
 
 - The user agent used to fetch the clearance cookie must match the user agent being used within the requests that use the clearance cookie
     > **Note**
@@ -27,19 +27,19 @@ flowchart
 
 ## Usage
 > **Note**
-> Depending on the user agent used, it may affect your ability to solve the cloudflare challenge
+> Depending on the user agent used, it may affect your ability to solve the Cloudflare challenge
 
 ```
 usage: main.py [-h] [-v] [-d] -u URL [-f FILE] [-t TIMEOUT] [-p PROXY] [-ua USER_AGENT]
 
-Fetches cf_clearance cookies from websites issuing cloudflare challenges to visitors
+A simple program for scraping Cloudflare clearance (cf_clearance) cookies from websites issuing Cloudflare challenges to visitors
 
 options:
   -h, --help            show this help message and exit
   -v, --verbose         Increase output verbosity
   -d, --debug           Run the browser in headed mode
-  -u URL, --url URL     URL to fetch cf_clearance cookie from
-  -f FILE, --file FILE  File to write the cf_clearance cookie information to (JSON format)
+  -u URL, --url URL     URL to fetch the Cloudflare clearance cookie from
+  -f FILE, --file FILE  File to write the Cloudflare clearance cookie information to (JSON format)
   -t TIMEOUT, --timeout TIMEOUT
                         Request timeout (seconds)
   -p PROXY, --proxy PROXY

@@ -40,9 +40,9 @@ class Scraper:
     Methods
     -------
     parse_clearance_cookie(cookies: Cookies) -> Optional[Dict[str, Any]]
-        Parse the cf_clearance cookie from a list of cookies.
+        Parse the Cloudflare clearance cookie from a list of cookies.
     get_cookies(url: str) -> Optional[Cookies]
-        Solve the cloudflare challenge and get cookies from the page.
+        Solve the Cloudflare challenge and get the cookies from the page.
     """
 
     def __init__(
@@ -100,7 +100,7 @@ class Scraper:
 
     def _detect_challenge(self) -> bool:
         """
-        Detect if the page is a cloudflare challenge.
+        Detect if the page is a Cloudflare challenge.
 
         Parameters
         ----------
@@ -110,7 +110,7 @@ class Scraper:
         Returns
         -------
         bool
-            True if the page is a cloudflare challenge, False otherwise.
+            True if the page is a Cloudflare challenge, False otherwise.
         """
         return any(
             re.search(uri_path, self._page.content())
@@ -118,7 +118,7 @@ class Scraper:
         )
 
     def _solve_challenge(self) -> None:
-        """Solve the cloudflare challenge."""
+        """Solve the Cloudflare challenge."""
         verify_button_pattern = re.compile(
             "Verify (I am|you are) (not a bot|(a )?human)"
         )
@@ -134,7 +134,7 @@ class Scraper:
                 challenge_spinner.wait_for(state="hidden")
 
             if verify_button.is_visible():
-                verify_button.click(force=True, no_wait_after=True)
+                verify_button.click(force=True)
             elif any(
                 re.match(url, frame.url)
                 for url in (
@@ -148,7 +148,7 @@ class Scraper:
     @staticmethod
     def parse_clearance_cookie(cookies: Cookies) -> Optional[Dict[str, Any]]:
         """
-        Parse the cf_clearance cookie from a list of cookies.
+        Parse the Cloudflare clearance cookie from a list of cookies.
 
         Parameters
         ----------
@@ -168,7 +168,7 @@ class Scraper:
 
     def get_cookies(self, url: str) -> Optional[Cookies]:
         """
-        Solve the cloudflare challenge and get cookies from the page.
+        Solve the Cloudflare challenge and get the cookies from the page.
 
         Parameters
         ----------
@@ -189,14 +189,14 @@ class Scraper:
         html = self._page.content()
 
         if re.search(ChallengePlatform.JAVASCRIPT.value, html):
-            logging.info("Solving cloudflare challenge [JavaScript]...")
+            logging.info("Solving Cloudflare challenge [JavaScript]...")
         elif re.search(ChallengePlatform.MANAGED.value, html):
-            logging.info("Solving cloudflare challenge [Managed]...")
+            logging.info("Solving Cloudflare challenge [Managed]...")
         elif re.search(ChallengePlatform.HCAPTCHA.value, html):
             logging.error("Cloudflare returned an hCaptcha page.")
             return None
         else:
-            logging.error("No cloudflare challenge detected.")
+            logging.error("No Cloudflare challenge detected.")
             return None
 
         try:
@@ -209,7 +209,7 @@ class Scraper:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Fetches cf_clearance cookies from websites issuing cloudflare challenges to visitors"
+        description="A simple program for scraping Cloudflare clearance (cf_clearance) cookies from websites issuing Cloudflare challenges to visitors"
     )
     parser.add_argument(
         "-v", "--verbose", help="Increase output verbosity", action="store_true"
@@ -220,14 +220,14 @@ def main() -> None:
     parser.add_argument(
         "-u",
         "--url",
-        help="URL to fetch cf_clearance cookie from",
+        help="URL to fetch the Cloudflare clearance cookie from",
         type=str,
         required=True,
     )
     parser.add_argument(
         "-f",
         "--file",
-        help="File to write the cf_clearance cookie information to (JSON format)",
+        help="File to write the Cloudflare clearance cookie information to (JSON format)",
         type=str,
         default=None,
     )
@@ -279,7 +279,7 @@ def main() -> None:
         clearance_cookie = scraper.parse_clearance_cookie(cookies)
 
     if clearance_cookie is None:
-        logging.error("Failed to retrieve cf_clearance cookie.")
+        logging.error("Failed to retrieve the Cloudflare clearance cookie.")
         return
 
     if not args.verbose:
@@ -291,7 +291,7 @@ def main() -> None:
     if args.file is None:
         return
 
-    logging.info("Writing cf_clearance cookie information to %s...", args.file)
+    logging.info("Writing Cloudflare clearance cookie information to %s...", args.file)
 
     try:
         with open(args.file, encoding="utf-8") as file:
