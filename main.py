@@ -19,7 +19,7 @@ class ChallengePlatform(Enum):
 
     JAVASCRIPT = "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/jsch/v1"
     MANAGED = "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/managed/v1"
-    HCAPTCHA = "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/captcha/v1"
+    CAPTCHA = "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/captcha/v1"
 
 
 class Scraper:
@@ -194,8 +194,8 @@ class Scraper:
             logging.info("Solving Cloudflare challenge [JavaScript]...")
         elif re.search(ChallengePlatform.MANAGED.value, html):
             logging.info("Solving Cloudflare challenge [Managed]...")
-        elif re.search(ChallengePlatform.HCAPTCHA.value, html):
-            logging.error("Cloudflare returned an hCaptcha page.")
+        elif re.search(ChallengePlatform.CAPTCHA.value, html):
+            logging.error("Cloudflare returned a CAPTCHA page.")
             return None
         else:
             logging.error("No Cloudflare challenge detected.")
