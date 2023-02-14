@@ -256,15 +256,15 @@ def main() -> None:
     )
 
     args = parser.parse_args()
+    logging_level = logging.INFO if args.verbose else logging.ERROR
 
-    if args.verbose:
-        logging.basicConfig(
-            format="[%(asctime)s] [%(levelname)s] %(message)s",
-            datefmt="%H:%M:%S",
-            level=logging.INFO,
-        )
+    logging.basicConfig(
+        format="[%(asctime)s] [%(levelname)s] %(message)s",
+        datefmt="%H:%M:%S",
+        level=logging_level,
+    )
 
-    logging.info("Launching %s browser...", "headless" if not args.debug else "headed")
+    logging.info("Launching %s browser...", "headed" if args.debug else "headless")
 
     with Scraper(
         user_agent=args.user_agent,
