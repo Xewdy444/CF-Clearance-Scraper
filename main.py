@@ -22,27 +22,36 @@ class ChallengePlatform(Enum):
     CAPTCHA = "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/captcha/v1"
 
 
-class Scraper:
+class CloudflareSolver:
     """
-    Cookie scraper class.
+    A class for solving Cloudflare challenges with Playwright.
 
     Parameters
     ----------
     user_agent : str
-        User agent to use for requests.
+        User agent to use for the browser.
     timeout : int
-        Timeout in seconds.
-    debug : bool
-        Whether to run the browser in headed mode.
+        Request timeout (seconds).
+    headless : bool
+        Run the browser in headless mode.
     proxy : Optional[str]
-        Proxy to use for requests.
+        Proxy URL string to use for the browser.
+
+    Attributes
+    ----------
+    page : playwright.sync_api.Page
+        Playwright page object.
+    cookies : Cookies
+        The cookies from the page.
 
     Methods
     -------
-    parse_clearance_cookie(cookies: Cookies) -> Optional[Dict[str, Any]]
-        Parse the Cloudflare clearance cookie from a list of cookies.
-    get_cookies(url: str) -> Optional[Cookies]
-        Solve the Cloudflare challenge and get the cookies from the page.
+    solve_challenge()
+        Solve the Cloudflare challenge on the current page.
+    extract_clearance_cookie(cookies: Cookies) -> Optional[Dict[str, Any]]
+        Extract the Cloudflare clearance cookie from a list of cookies.
+    detect_challenge() -> Optional[ChallengePlatform]
+        Detect the Cloudflare challenge platform on the current page.
     """
 
     def __init__(
@@ -50,7 +59,7 @@ class Scraper:
         *,
         user_agent: str,
         timeout: int,
-        debug: bool,
+        headless: bool,
         proxy: Optional[str],
     ) -> None:
         self._playwright = sync_playwright().start()
@@ -58,12 +67,12 @@ class Scraper:
         if proxy is not None:
             proxy = self._parse_proxy(proxy)
 
-        browser = self._playwright.webkit.launch(headless=not debug, proxy=proxy)
+        browser = self._playwright.webkit.launch(headless=headless, proxy=proxy)
         context = browser.new_context(user_agent=user_agent)
         context.set_default_timeout(timeout * 1000)
-        self._page = context.new_page()
+        self.page = context.new_page()
 
-    def __enter__(self) -> Scraper:
+    def __enter__(self) -> CloudflareSolver:
         return self
 
     def __exit__(self, *args: Any) -> None:
@@ -72,7 +81,7 @@ class Scraper:
     @staticmethod
     def _parse_proxy(proxy: str) -> Dict[str, str]:
         """
-        Parse proxy string into a dictionary.
+        Parse a proxy URL string into a dictionary of proxy parameters for the Playwright browser.
 
         Parameters
         ----------
@@ -98,38 +107,19 @@ class Scraper:
 
         return proxy_params
 
-    def _detect_challenge(self) -> bool:
-        """
-        Detect if the page is a Cloudflare challenge.
-
-        Parameters
-        ----------
-        html : str
-            HTML of the page.
-
-        Returns
-        -------
-        bool
-            True if the page is a Cloudflare challenge, False otherwise.
-        """
-        return any(
-            re.search(uri_path, self._page.content())
-            for uri_path in (challenge.value for challenge in ChallengePlatform)
-        )
-
-    def _solve_challenge(self) -> None:
-        """Solve the Cloudflare challenge."""
+    def solve_challenge(self) -> None:
+        """Solve the Cloudflare challenge on the current page."""
         verify_button_pattern = re.compile(
             "Verify (I am|you are) (not a bot|(a )?human)"
         )
 
-        verify_button = self._page.get_by_role("button", name=verify_button_pattern)
-        challenge_spinner = self._page.locator("#challenge-spinner")
-        challenge_stage = self._page.locator("div#challenge-stage")
+        verify_button = self.page.get_by_role("button", name=verify_button_pattern)
+        challenge_spinner = self.page.locator("#challenge-spinner")
+        challenge_stage = self.page.locator("div#challenge-stage")
 
         while (
-            self.parse_clearance_cookie(self._page.context.cookies()) is None
-            and self._detect_challenge()
+            self.extract_clearance_cookie(self.cookies) is None
+            and self.detect_challenge() is not None
         ):
             if challenge_spinner.is_visible():
                 challenge_spinner.wait_for(state="hidden")
@@ -138,19 +128,31 @@ class Scraper:
                 verify_button.click()
                 challenge_stage.wait_for(state="hidden")
             elif any(
-                re.match(url, frame.url)
+                re.match(url, frame.url) is not None
                 for url in (
                     "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/[bg]/turnstile",
                     "https://cf-assets.hcaptcha.com/captcha/v1",
                 )
-                for frame in self._page.frames
+                for frame in self.page.frames
             ):
-                self._page.reload()
+                self.page.reload()
+
+    @property
+    def cookies(self) -> Cookies:
+        """
+        The cookies from the page.
+
+        Returns
+        -------
+        Cookies
+            List of cookies.
+        """
+        return self.page.context.cookies()
 
     @staticmethod
-    def parse_clearance_cookie(cookies: Cookies) -> Optional[Dict[str, Any]]:
+    def extract_clearance_cookie(cookies: Cookies) -> Optional[Dict[str, Any]]:
         """
-        Parse the Cloudflare clearance cookie from a list of cookies.
+        Extract the Cloudflare clearance cookie from a list of cookies.
 
         Parameters
         ----------
@@ -168,45 +170,27 @@ class Scraper:
 
         return None
 
-    def get_cookies(self, url: str) -> Optional[Cookies]:
+    def detect_challenge(self) -> Optional[ChallengePlatform]:
         """
-        Solve the Cloudflare challenge and get the cookies from the page.
-
-        Parameters
-        ----------
-        url : str
-            URL to scrape cookies from.
+        Detect the Cloudflare challenge platform on the current page.
 
         Returns
         -------
-        Optional[Cookies]
-            List of cookies.
+        Optional[ChallengePlatform]
+            Cloudflare challenge platform.
         """
-        try:
-            self._page.goto(url)
-        except PlaywrightError as err:
-            logging.error(err)
-            return None
+        html = self.page.content()
 
-        html = self._page.content()
-
-        if re.search(ChallengePlatform.JAVASCRIPT.value, html):
-            logging.info("Solving Cloudflare challenge [JavaScript]...")
-        elif re.search(ChallengePlatform.MANAGED.value, html):
-            logging.info("Solving Cloudflare challenge [Managed]...")
-        elif re.search(ChallengePlatform.CAPTCHA.value, html):
-            logging.error("Cloudflare returned a CAPTCHA page.")
-            return None
+        if re.search(ChallengePlatform.JAVASCRIPT.value, html) is not None:
+            platform = ChallengePlatform.JAVASCRIPT
+        elif re.search(ChallengePlatform.MANAGED.value, html) is not None:
+            platform = ChallengePlatform.MANAGED
+        elif re.search(ChallengePlatform.CAPTCHA.value, html) is not None:
+            platform = ChallengePlatform.CAPTCHA
         else:
-            logging.error("No Cloudflare challenge detected.")
             return None
 
-        try:
-            self._solve_challenge()
-        except PlaywrightError as err:
-            logging.error(err)
-
-        return self._page.context.cookies()
+        return platform
 
 
 def main() -> None:
@@ -266,19 +250,43 @@ def main() -> None:
 
     logging.info("Launching %s browser...", "headed" if args.debug else "headless")
 
-    with Scraper(
+    challenge_messages = {
+        ChallengePlatform.JAVASCRIPT: "Solving Cloudflare challenge [JavaScript]...",
+        ChallengePlatform.MANAGED: "Solving Cloudflare challenge [Managed]...",
+    }
+
+    with CloudflareSolver(
         user_agent=args.user_agent,
         timeout=args.timeout,
-        debug=args.debug,
+        headless=not args.debug,
         proxy=args.proxy,
-    ) as scraper:
+    ) as solver:
         logging.info("Going to %s...", args.url)
-        cookies = scraper.get_cookies(args.url)
 
-        if cookies is None:
+        try:
+            solver.page.goto(args.url)
+        except PlaywrightError as err:
+            logging.error(err)
             return
 
-        clearance_cookie = scraper.parse_clearance_cookie(cookies)
+        challenge_platform = solver.detect_challenge()
+
+        if challenge_platform is None:
+            logging.error("No Cloudflare challenge detected.")
+            return
+
+        if challenge_platform == ChallengePlatform.CAPTCHA:
+            logging.error("Cloudflare returned a CAPTCHA page.")
+            return
+
+        logging.info(challenge_messages[challenge_platform])
+
+        try:
+            solver.solve_challenge()
+        except PlaywrightError as err:
+            logging.error(err)
+
+        clearance_cookie = solver.extract_clearance_cookie(solver.cookies)
 
     if clearance_cookie is None:
         logging.error("Failed to retrieve the Cloudflare clearance cookie.")
