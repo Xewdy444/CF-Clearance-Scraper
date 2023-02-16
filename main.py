@@ -181,16 +181,11 @@ class CloudflareSolver:
         """
         html = self.page.content()
 
-        if re.search(ChallengePlatform.JAVASCRIPT.value, html) is not None:
-            platform = ChallengePlatform.JAVASCRIPT
-        elif re.search(ChallengePlatform.MANAGED.value, html) is not None:
-            platform = ChallengePlatform.MANAGED
-        elif re.search(ChallengePlatform.CAPTCHA.value, html) is not None:
-            platform = ChallengePlatform.CAPTCHA
-        else:
-            return None
+        for platform in ChallengePlatform:
+            if re.search(platform.value, html) is not None:
+                return platform
 
-        return platform
+        return None
 
 
 def main() -> None:
