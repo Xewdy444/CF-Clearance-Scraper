@@ -20,7 +20,6 @@ flowchart
 ```
 
 ## Installation
-
     $ pip install -r requirements.txt
     $ python -m playwright install --with-deps firefox
 
@@ -48,6 +47,5 @@ options:
                         User agent to use for requests
 ```
 
-```
-Example: python main.py -u https://nowsecure.nl -f cookies.json -v
-```
+## Example
+    $ python main.py -u https://nowsecure.nl -f cookies.json -v
