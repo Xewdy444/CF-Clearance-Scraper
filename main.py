@@ -9,7 +9,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 
 from playwright._impl._api_types import Error as PlaywrightError
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import Frame, sync_playwright
 
 Cookies = List[Dict[str, Any]]
 
@@ -40,18 +40,18 @@ class CloudflareSolver:
     Attributes
     ----------
     page : playwright.sync_api.Page
-        Playwright page object.
+        The Playwright page.
     cookies : Cookies
         The cookies from the page.
 
     Methods
     -------
-    solve_challenge()
-        Solve the Cloudflare challenge on the current page.
     extract_clearance_cookie(cookies: Cookies) -> Optional[Dict[str, Any]]
         Extract the Cloudflare clearance cookie from a list of cookies.
     detect_challenge() -> Optional[ChallengePlatform]
         Detect the Cloudflare challenge platform on the current page.
+    solve_challenge()
+        Solve the Cloudflare challenge on the current page.
     """
 
     def __init__(
@@ -67,7 +67,7 @@ class CloudflareSolver:
         if proxy is not None:
             proxy = self._parse_proxy(proxy)
 
-        browser = self._playwright.webkit.launch(headless=headless, proxy=proxy)
+        browser = self._playwright.firefox.launch(headless=headless, proxy=proxy)
         context = browser.new_context(user_agent=user_agent)
         context.set_default_timeout(timeout * 1000)
         self.page = context.new_page()
@@ -107,35 +107,26 @@ class CloudflareSolver:
 
         return proxy_params
 
-    def solve_challenge(self) -> None:
-        """Solve the Cloudflare challenge on the current page."""
-        verify_button_pattern = re.compile(
-            "Verify (I am|you are) (not a bot|(a )?human)"
-        )
+    def _get_turnstile_frame(self) -> Optional[Frame]:
+        """
+        Get the Cloudflare turnstile frame.
 
-        verify_button = self.page.get_by_role("button", name=verify_button_pattern)
-        challenge_spinner = self.page.locator("#challenge-spinner")
-        challenge_stage = self.page.locator("div#challenge-stage")
-
-        while (
-            self.extract_clearance_cookie(self.cookies) is None
-            and self.detect_challenge() is not None
-        ):
-            if challenge_spinner.is_visible():
-                challenge_spinner.wait_for(state="hidden")
-
-            if verify_button.is_visible():
-                verify_button.click()
-                challenge_stage.wait_for(state="hidden")
-            elif any(
-                re.match(url, frame.url) is not None
-                for url in (
+        Returns
+        -------
+        Optional[Frame]
+            Cloudflare turnstile frame.
+        """
+        for frame in self.page.frames:
+            if (
+                re.match(
                     "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/[bg]/turnstile",
-                    "https://cf-assets.hcaptcha.com/captcha/v1",
+                    frame.url,
                 )
-                for frame in self.page.frames
+                is not None
             ):
-                self.page.reload()
+                return frame
+
+        return None
 
     @property
     def cookies(self) -> Cookies:
@@ -187,6 +178,36 @@ class CloudflareSolver:
 
         return None
 
+    def solve_challenge(self) -> None:
+        """Solve the Cloudflare challenge on the current page."""
+        verify_button_pattern = re.compile(
+            "Verify (I am|you are) (not a bot|(a )?human)"
+        )
+
+        verify_button = self.page.get_by_role("button", name=verify_button_pattern)
+        challenge_spinner = self.page.locator("#challenge-spinner")
+        challenge_stage = self.page.locator("div#challenge-stage")
+
+        while (
+            self.extract_clearance_cookie(self.cookies) is None
+            and self.detect_challenge() is not None
+        ):
+            if challenge_spinner.is_visible():
+                challenge_spinner.wait_for(state="hidden")
+
+            if verify_button.is_visible():
+                verify_button.click()
+                challenge_stage.wait_for(state="hidden")
+            elif self._get_turnstile_frame() is not None:
+                turnstile_frame = self._get_turnstile_frame()
+                turnstile_frame.get_by_role("checkbox").click()
+                challenge_stage.wait_for(state="hidden")
+            elif any(
+                frame.url.startswith("https://cf-assets.hcaptcha.com/captcha/v1")
+                for frame in self.page.frames
+            ):
+                self.page.reload()
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(
@@ -231,7 +252,7 @@ def main() -> None:
         "--user-agent",
         help="User agent to use for requests",
         type=str,
-        default="Mozilla/5.0 (Windows NT 6.2; Win64; x64) AppleWebKit/605.1.15 (KHTML, like Gecko)",
+        default="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/109.0",
     )
 
     args = parser.parse_args()
@@ -248,6 +269,7 @@ def main() -> None:
     challenge_messages = {
         ChallengePlatform.JAVASCRIPT: "Solving Cloudflare challenge [JavaScript]...",
         ChallengePlatform.MANAGED: "Solving Cloudflare challenge [Managed]...",
+        ChallengePlatform.CAPTCHA: "Solving Cloudflare challenge [CAPTCHA]...",
     }
 
     with CloudflareSolver(
@@ -268,10 +290,6 @@ def main() -> None:
 
         if challenge_platform is None:
             logging.error("No Cloudflare challenge detected.")
-            return
-
-        if challenge_platform == ChallengePlatform.CAPTCHA:
-            logging.error("Cloudflare returned a CAPTCHA page.")
             return
 
         logging.info(challenge_messages[challenge_platform])
