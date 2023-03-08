@@ -230,58 +230,58 @@ def main() -> None:
     parser.add_argument(
         "-u",
         "--url",
-        help="Required argument for specifying the URL to fetch the Cloudflare clearance cookie from.",
+        help="Required argument for specifying the URL to fetch the Cloudflare clearance cookie from",
         type=str,
         required=True,
     )
     parser.add_argument(
         "-f",
         "--file",
-        help="Optional argument for specifying the file to write the Cloudflare clearance cookie information to (in JSON format).",
+        help="Optional argument for specifying the file to write the Cloudflare clearance cookie information to (in JSON format)",
         type=str,
         default=None,
     )
     parser.add_argument(
         "-t",
         "--timeout",
-        help="Optional argument for specifying the request timeout (in seconds).",
+        help="Optional argument for specifying the request timeout (in seconds)",
         type=int,
         default=15,
     )
     parser.add_argument(
         "-p",
         "--proxy",
-        help="Optional argument for specifying the proxy server URL to use for requests (SOCKS5 proxy authentication not supported).",
+        help="Optional argument for specifying the proxy server URL to use for requests (SOCKS5 proxy authentication not supported)",
         type=str,
         default=None,
     )
     parser.add_argument(
         "-ua",
         "--user-agent",
-        help="Optional argument for specifying the user agent to use for requests.",
+        help="Optional argument for specifying the user agent to use for requests",
         type=str,
         default="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/109.0",
     )
     parser.add_argument(
         "--disable-http2",
-        help="Optional argument for disabling HTTP/2 support for the browser.",
+        help="Optional argument for disabling HTTP/2 support for the browser",
         action="store_true",
     )
     parser.add_argument(
         "--disable-http3",
-        help="Optional argument for disabling HTTP/3 support for the browser.",
+        help="Optional argument for disabling HTTP/3 support for the browser",
         action="store_true",
     )
     parser.add_argument(
         "-d",
         "--debug",
-        help="Optional argument for running the browser in headed mode.",
+        help="Optional argument for running the browser in headed mode",
         action="store_true",
     )
     parser.add_argument(
         "-v",
         "--verbose",
-        help="Optional argument for increasing the output verbosity.",
+        help="Optional argument for increasing the output verbosity",
         action="store_true",
     )
 

@@ -35,18 +35,18 @@ A simple program for scraping Cloudflare clearance (cf_clearance) cookies from w
 
 options:
   -h, --help            show this help message and exit
-  -u URL, --url URL     Required argument for specifying the URL to fetch the Cloudflare clearance cookie from.
-  -f FILE, --file FILE  Optional argument for specifying the file to write the Cloudflare clearance cookie information to (in JSON format).   
+  -u URL, --url URL     Required argument for specifying the URL to fetch the Cloudflare clearance cookie from
+  -f FILE, --file FILE  Optional argument for specifying the file to write the Cloudflare clearance cookie information to (in JSON format)   
   -t TIMEOUT, --timeout TIMEOUT
-                        Optional argument for specifying the request timeout (in seconds).
+                        Optional argument for specifying the request timeout (in seconds)
   -p PROXY, --proxy PROXY
-                        Optional argument for specifying the proxy server URL to use for requests (SOCKS5 proxy authentication not supported).
+                        Optional argument for specifying the proxy server URL to use for requests (SOCKS5 proxy authentication not supported)
   -ua USER_AGENT, --user-agent USER_AGENT
-                        Optional argument for specifying the user agent to use for requests.
-  --disable-http2       Optional argument for disabling HTTP/2 support for the browser.
-  --disable-http3       Optional argument for disabling HTTP/3 support for the browser.
-  -d, --debug           Optional argument for running the browser in headed mode.
-  -v, --verbose         Optional argument for increasing the output verbosity.
+                        Optional argument for specifying the user agent to use for requests
+  --disable-http2       Optional argument for disabling HTTP/2 support for the browser
+  --disable-http3       Optional argument for disabling HTTP/3 support for the browser
+  -d, --debug           Optional argument for running the browser in headed mode
+  -v, --verbose         Optional argument for increasing the output verbosity
 ```
 
 ## Example
