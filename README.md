@@ -29,22 +29,24 @@ flowchart
 > Depending on the user agent used, it may affect your ability to solve the Cloudflare challenge
 
 ```
-usage: main.py [-h] [-v] [-d] -u URL [-f FILE] [-t TIMEOUT] [-p PROXY] [-ua USER_AGENT]
+usage: main.py [-h] -u URL [-f FILE] [-t TIMEOUT] [-p PROXY] [-ua USER_AGENT] [--disable-http2] [--disable-http3] [-d] [-v]
 
 A simple program for scraping Cloudflare clearance (cf_clearance) cookies from websites issuing Cloudflare challenges to visitors
 
 options:
   -h, --help            show this help message and exit
-  -v, --verbose         Increase output verbosity
-  -d, --debug           Run the browser in headed mode
-  -u URL, --url URL     URL to fetch the Cloudflare clearance cookie from
-  -f FILE, --file FILE  File to write the Cloudflare clearance cookie information to (JSON format)
+  -u URL, --url URL     Required argument for specifying the URL to fetch the Cloudflare clearance cookie from.
+  -f FILE, --file FILE  Optional argument for specifying the file to write the Cloudflare clearance cookie information to (in JSON format).   
   -t TIMEOUT, --timeout TIMEOUT
-                        Request timeout (seconds)
+                        Optional argument for specifying the request timeout (in seconds).
   -p PROXY, --proxy PROXY
-                        Proxy server to use for requests (SOCKS5 proxy authentication not supported)
+                        Optional argument for specifying the proxy server URL to use for requests (SOCKS5 proxy authentication not supported).
   -ua USER_AGENT, --user-agent USER_AGENT
-                        User agent to use for requests
+                        Optional argument for specifying the user agent to use for requests.
+  --disable-http2       Optional argument for disabling HTTP/2 support for the browser.
+  --disable-http3       Optional argument for disabling HTTP/3 support for the browser.
+  -d, --debug           Optional argument for running the browser in headed mode.
+  -v, --verbose         Optional argument for increasing the output verbosity.
 ```
 
 ## Example
