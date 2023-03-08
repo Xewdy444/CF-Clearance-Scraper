@@ -29,20 +29,24 @@ class CloudflareSolver:
     Parameters
     ----------
     user_agent : str
-        User agent to use for the browser.
+        User agent string to use for the browser requests.
     timeout : int
-        Request timeout (seconds).
+        Timeout value in seconds for the browser requests.
+    http2 : bool
+        Enable or disable HTTP/2 support for the browser requests.
+    http3 : bool
+        Enable or disable HTTP/3 support for the browser requests.
     headless : bool
-        Run the browser in headless mode.
+        Enable or disable headless mode for the browser.
     proxy : Optional[str]
-        Proxy URL string to use for the browser.
+        Proxy server URL string to use for the browser requests.
 
     Attributes
     ----------
     page : playwright.sync_api.Page
         The Playwright page.
     cookies : Cookies
-        The cookies from the page.
+        The cookies from current the page.
 
     Methods
     -------
@@ -59,6 +63,8 @@ class CloudflareSolver:
         *,
         user_agent: str,
         timeout: int,
+        http2: bool,
+        http3: bool,
         headless: bool,
         proxy: Optional[str],
     ) -> None:
@@ -67,7 +73,15 @@ class CloudflareSolver:
         if proxy is not None:
             proxy = self._parse_proxy(proxy)
 
-        browser = self._playwright.firefox.launch(headless=headless, proxy=proxy)
+        browser = self._playwright.firefox.launch(
+            firefox_user_prefs={
+                "network.http.http2.enabled": http2,
+                "network.http.http3.enable": http3,
+            },
+            headless=headless,
+            proxy=proxy,
+        )
+
         context = browser.new_context(user_agent=user_agent)
         context.set_default_timeout(timeout * 1000)
         self.page = context.new_page()
@@ -214,45 +228,61 @@ def main() -> None:
         description="A simple program for scraping Cloudflare clearance (cf_clearance) cookies from websites issuing Cloudflare challenges to visitors"
     )
     parser.add_argument(
-        "-v", "--verbose", help="Increase output verbosity", action="store_true"
-    )
-    parser.add_argument(
-        "-d", "--debug", help="Run the browser in headed mode", action="store_true"
-    )
-    parser.add_argument(
         "-u",
         "--url",
-        help="URL to fetch the Cloudflare clearance cookie from",
+        help="Required argument for specifying the URL to fetch the Cloudflare clearance cookie from.",
         type=str,
         required=True,
     )
     parser.add_argument(
         "-f",
         "--file",
-        help="File to write the Cloudflare clearance cookie information to (JSON format)",
+        help="Optional argument for specifying the file to write the Cloudflare clearance cookie information to (in JSON format).",
         type=str,
         default=None,
     )
     parser.add_argument(
         "-t",
         "--timeout",
-        help="Request timeout (seconds)",
+        help="Optional argument for specifying the request timeout (in seconds).",
         type=int,
         default=15,
     )
     parser.add_argument(
         "-p",
         "--proxy",
-        help="Proxy server to use for requests (SOCKS5 proxy authentication not supported)",
+        help="Optional argument for specifying the proxy server URL to use for requests (SOCKS5 proxy authentication not supported).",
         type=str,
         default=None,
     )
     parser.add_argument(
         "-ua",
         "--user-agent",
-        help="User agent to use for requests",
+        help="Optional argument for specifying the user agent to use for requests.",
         type=str,
         default="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/109.0",
+    )
+    parser.add_argument(
+        "--disable-http2",
+        help="Optional argument for disabling HTTP/2 support for the browser.",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--disable-http3",
+        help="Optional argument for disabling HTTP/3 support for the browser.",
+        action="store_true",
+    )
+    parser.add_argument(
+        "-d",
+        "--debug",
+        help="Optional argument for running the browser in headed mode.",
+        action="store_true",
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        help="Optional argument for increasing the output verbosity.",
+        action="store_true",
     )
 
     args = parser.parse_args()
@@ -275,6 +305,8 @@ def main() -> None:
     with CloudflareSolver(
         user_agent=args.user_agent,
         timeout=args.timeout,
+        http2=not args.disable_http2,
+        http3=not args.disable_http3,
         headless=not args.debug,
         proxy=args.proxy,
     ) as solver:
