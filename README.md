@@ -29,28 +29,30 @@ flowchart
 > Depending on the user agent used, it may affect your ability to solve the Cloudflare challenge
 
 ```
-usage: main.py [-h] -u URL [-f FILE] [-t TIMEOUT] [-p PROXY] [-ua USER_AGENT] [--disable-http2] [--disable-http3] [-d] [-v]
+usage: main.py [-h] [-f FILE] [-t TIMEOUT] [-p PROXY] [-ua USER_AGENT] [--disable-http2] [--disable-http3] [-d] [-v] URL
 
 A simple program for scraping Cloudflare clearance (cf_clearance) cookies from websites issuing Cloudflare challenges to visitors
 
+positional arguments:
+  URL                   The URL to scrape the Cloudflare clearance cookie from
+
 options:
   -h, --help            show this help message and exit
-  -u URL, --url URL     Required argument for specifying the URL to fetch the Cloudflare clearance cookie from
-  -f FILE, --file FILE  Optional argument for specifying the file to write the Cloudflare clearance cookie information to (in JSON format)   
+  -f FILE, --file FILE  The file to write the Cloudflare clearance cookie information to, in JSON format
   -t TIMEOUT, --timeout TIMEOUT
-                        Optional argument for specifying the request timeout (in seconds)
+                        The browser default timeout in seconds
   -p PROXY, --proxy PROXY
-                        Optional argument for specifying the proxy server URL to use for requests (SOCKS5 proxy authentication not supported)
+                        The proxy server URL to use for the browser requests (SOCKS5 proxy authentication is not supported)      
   -ua USER_AGENT, --user-agent USER_AGENT
-                        Optional argument for specifying the user agent to use for requests
-  --disable-http2       Optional argument for disabling HTTP/2 support for the browser
-  --disable-http3       Optional argument for disabling HTTP/3 support for the browser
-  -d, --debug           Optional argument for running the browser in headed mode
-  -v, --verbose         Optional argument for increasing the output verbosity
+                        The user agent to use for the browser requests
+  --disable-http2       Disable the usage of HTTP/2 for the browser requests
+  --disable-http3       Disable the usage of HTTP/3 for the browser requests
+  -d, --debug           Run the browser in headed mode
+  -v, --verbose         Increase the output verbosity
 ```
 
 ## Example
-    $ python main.py -v -u https://captcha.website -f cookies.json
+    $ python main.py -v -f cookies.json https://captcha.website
     [16:12:16] [INFO] Launching headless browser...
     [16:12:19] [INFO] Going to https://captcha.website...
     [16:12:20] [INFO] Solving Cloudflare challenge [CAPTCHA]...

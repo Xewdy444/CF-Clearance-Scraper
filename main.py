@@ -29,17 +29,17 @@ class CloudflareSolver:
     Parameters
     ----------
     user_agent : str
-        User agent string to use for the browser requests.
+        The user agent string to use for the browser requests.
     timeout : int
-        Timeout value in seconds for the browser requests.
+        The browser default timeout in seconds.
     http2 : bool
-        Enable or disable HTTP/2 support for the browser requests.
+        Enable or disable the usage of HTTP/2 for the browser requests.
     http3 : bool
-        Enable or disable HTTP/3 support for the browser requests.
+        Enable or disable the usage of HTTP/3 for the browser requests.
     headless : bool
         Enable or disable headless mode for the browser.
     proxy : Optional[str]
-        Proxy server URL string to use for the browser requests.
+        The proxy server URL to use for the browser requests.
 
     Attributes
     ----------
@@ -145,7 +145,7 @@ class CloudflareSolver:
     @property
     def cookies(self) -> Cookies:
         """
-        The cookies from the page.
+        The cookies from the current page.
 
         Returns
         -------
@@ -227,62 +227,70 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="A simple program for scraping Cloudflare clearance (cf_clearance) cookies from websites issuing Cloudflare challenges to visitors"
     )
+
     parser.add_argument(
-        "-u",
-        "--url",
-        help="Required argument for specifying the URL to fetch the Cloudflare clearance cookie from",
+        "url",
+        metavar="URL",
+        help="The URL to scrape the Cloudflare clearance cookie from",
         type=str,
-        required=True,
     )
+
     parser.add_argument(
         "-f",
         "--file",
-        help="Optional argument for specifying the file to write the Cloudflare clearance cookie information to (in JSON format)",
-        type=str,
         default=None,
+        help="The file to write the Cloudflare clearance cookie information to, in JSON format",
+        type=str,
     )
+
     parser.add_argument(
         "-t",
         "--timeout",
-        help="Optional argument for specifying the request timeout (in seconds)",
-        type=int,
         default=15,
+        help="The browser default timeout in seconds",
+        type=int,
     )
+
     parser.add_argument(
         "-p",
         "--proxy",
-        help="Optional argument for specifying the proxy server URL to use for requests (SOCKS5 proxy authentication not supported)",
-        type=str,
         default=None,
+        help="The proxy server URL to use for the browser requests (SOCKS5 proxy authentication is not supported)",
+        type=str,
     )
+
     parser.add_argument(
         "-ua",
         "--user-agent",
-        help="Optional argument for specifying the user agent to use for requests",
-        type=str,
         default="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/109.0",
+        help="The user agent to use for the browser requests",
+        type=str,
     )
+
     parser.add_argument(
         "--disable-http2",
-        help="Optional argument for disabling HTTP/2 support for the browser",
         action="store_true",
+        help="Disable the usage of HTTP/2 for the browser requests",
     )
+
     parser.add_argument(
         "--disable-http3",
-        help="Optional argument for disabling HTTP/3 support for the browser",
         action="store_true",
+        help="Disable the usage of HTTP/3 for the browser requests",
     )
+
     parser.add_argument(
         "-d",
         "--debug",
-        help="Optional argument for running the browser in headed mode",
         action="store_true",
+        help="Run the browser in headed mode",
     )
+
     parser.add_argument(
         "-v",
         "--verbose",
-        help="Optional argument for increasing the output verbosity",
         action="store_true",
+        help="Increase the output verbosity",
     )
 
     args = parser.parse_args()
