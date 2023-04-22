@@ -10,7 +10,7 @@ In order to bypass Cloudflare challenges with the clearance cookies, you must ma
 
 - The user agent used to fetch the clearance cookie must match the user agent being used within the requests that use the clearance cookie
     > **Note**
-    > The default user agent used by the scraper is `Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/109.0`
+    > The default user agent used by the scraper is `Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/111.0`.
 - The IP address used to fetch the clearance cookie must match the IP address being used to make the requests that use the clearance cookie
 
 ```mermaid
@@ -29,7 +29,7 @@ flowchart
 
 ## Usage
 > **Note**
-> Depending on the user agent used, it may affect your ability to solve the Cloudflare challenge
+> Depending on the user agent used, it may affect your ability to solve the Cloudflare challenge.
 
 ```
 usage: main.py [-h] [-f FILE] [-t TIMEOUT] [-p PROXY] [-ua USER_AGENT] [--disable-http2] [--disable-http3] [-d] [-v] URL
