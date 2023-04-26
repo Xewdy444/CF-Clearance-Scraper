@@ -246,7 +246,7 @@ def main() -> None:
     parser.add_argument(
         "-t",
         "--timeout",
-        default=15,
+        default=30,
         help="The browser default timeout in seconds",
         type=int,
     )
