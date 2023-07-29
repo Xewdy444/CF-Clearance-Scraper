@@ -6,20 +6,20 @@ import logging
 import re
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 from playwright._impl._api_types import Error as PlaywrightError
 from playwright.sync_api import Frame, sync_playwright
 
-Cookies = List[Dict[str, Any]]
+Cookie = Dict[str, Any]
 
 
 class ChallengePlatform(Enum):
-    """Cloudflare challenge platform URI paths."""
+    """Cloudflare challenge platform types."""
 
-    JAVASCRIPT = "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/jsch/v1"
-    MANAGED = "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/managed/v1"
-    CAPTCHA = "/cdn-cgi/challenge-platform/h/[bg]/orchestrate/captcha/v1"
+    JAVASCRIPT = "non-interactive"
+    MANAGED = "managed"
+    INTERACTIVE = "interactive"
 
 
 class CloudflareSolver:
@@ -40,22 +40,6 @@ class CloudflareSolver:
         Enable or disable headless mode for the browser.
     proxy : Optional[str]
         The proxy server URL to use for the browser requests.
-
-    Attributes
-    ----------
-    page : playwright.sync_api.Page
-        The Playwright page.
-    cookies : Cookies
-        The cookies from current the page.
-
-    Methods
-    -------
-    extract_clearance_cookie(cookies: Cookies) -> Optional[Dict[str, Any]]
-        Extract the Cloudflare clearance cookie from a list of cookies.
-    detect_challenge() -> Optional[ChallengePlatform]
-        Detect the Cloudflare challenge platform on the current page.
-    solve_challenge()
-        Solve the Cloudflare challenge on the current page.
     """
 
     def __init__(
@@ -105,7 +89,7 @@ class CloudflareSolver:
         Returns
         -------
         Dict[str, str]
-            Dictionary of proxy parameters.
+            The dictionary of proxy parameters.
         """
         if "@" in proxy:
             proxy_regex = re.match("(.+)://(.+):(.+)@(.+)", proxy)
@@ -128,7 +112,7 @@ class CloudflareSolver:
         Returns
         -------
         Optional[Frame]
-            Cloudflare turnstile frame.
+            The Cloudflare turnstile frame.
         """
         for frame in self.page.frames:
             if (
@@ -143,31 +127,24 @@ class CloudflareSolver:
         return None
 
     @property
-    def cookies(self) -> Cookies:
-        """
-        The cookies from the current page.
-
-        Returns
-        -------
-        Cookies
-            List of cookies.
-        """
+    def cookies(self) -> List[Cookie]:
+        """The cookies from the current page."""
         return self.page.context.cookies()
 
     @staticmethod
-    def extract_clearance_cookie(cookies: Cookies) -> Optional[Dict[str, Any]]:
+    def extract_clearance_cookie(cookies: Iterable[Cookie]) -> Optional[Cookie]:
         """
         Extract the Cloudflare clearance cookie from a list of cookies.
 
         Parameters
         ----------
-        cookies : Cookies
+        cookies : Iterable[Cookie]
             List of cookies.
 
         Returns
         -------
-        Optional[Dict[str, Any]]
-            cf_clearance cookie dictionary.
+        Optional[Cookie]
+            The Cloudflare clearance cookie. Returns None if the cookie is not found.
         """
         for cookie in cookies:
             if cookie["name"] == "cf_clearance":
@@ -182,12 +159,12 @@ class CloudflareSolver:
         Returns
         -------
         Optional[ChallengePlatform]
-            Cloudflare challenge platform.
+            The Cloudflare challenge platform.
         """
         html = self.page.content()
 
         for platform in ChallengePlatform:
-            if re.search(platform.value, html) is not None:
+            if f"cType: '{platform.value}'" in html:
                 return platform
 
         return None
@@ -216,11 +193,6 @@ class CloudflareSolver:
                 turnstile_frame = self._get_turnstile_frame()
                 turnstile_frame.get_by_role("checkbox").click()
                 challenge_stage.wait_for(state="hidden")
-            elif any(
-                frame.url.startswith("https://cf-assets.hcaptcha.com/captcha/v1")
-                for frame in self.page.frames
-            ):
-                self.page.reload()
 
 
 def main() -> None:
@@ -262,7 +234,7 @@ def main() -> None:
     parser.add_argument(
         "-ua",
         "--user-agent",
-        default="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0",
+        default="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0",
         help="The user agent to use for the browser requests",
         type=str,
     )
@@ -307,7 +279,7 @@ def main() -> None:
     challenge_messages = {
         ChallengePlatform.JAVASCRIPT: "Solving Cloudflare challenge [JavaScript]...",
         ChallengePlatform.MANAGED: "Solving Cloudflare challenge [Managed]...",
-        ChallengePlatform.CAPTCHA: "Solving Cloudflare challenge [CAPTCHA]...",
+        ChallengePlatform.INTERACTIVE: "Solving Cloudflare challenge [Interactive]...",
     }
 
     with CloudflareSolver(

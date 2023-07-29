@@ -10,7 +10,7 @@ In order to bypass Cloudflare challenges with the clearance cookies, you must ma
 
 - The user agent used to fetch the clearance cookie must match the user agent being used within the requests that use the clearance cookie
     > **Note**
-    > The default user agent used by the scraper is `Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0`.
+    > The default user agent used by the scraper is `Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0`.
 - The IP address used to fetch the clearance cookie must match the IP address being used to make the requests that use the clearance cookie
 
 ```mermaid
@@ -55,10 +55,10 @@ options:
 ```
 
 ## Example
-    $ python main.py -v -f cookies.json https://captcha.website
-    [16:12:16] [INFO] Launching headless browser...
-    [16:12:19] [INFO] Going to https://captcha.website...
-    [16:12:20] [INFO] Solving Cloudflare challenge [CAPTCHA]...
-    [16:12:24] [INFO] Cookie: cf_clearance=i5Yk2ZhJCi8lHinh_nl3lD__qCgUBYsXgPE8tSF0dN8-1678399942-0-250
-    [16:12:24] [INFO] User agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/109.0
-    [16:12:24] [INFO] Writing Cloudflare clearance cookie information to cookies.json...
+    $ python main.py -v -f cookies.json https://nowsecure.nl
+    [11:33:32] [INFO] Launching headless browser...
+    [11:33:34] [INFO] Going to https://nowsecure.nl...
+    [11:33:34] [INFO] Solving Cloudflare challenge [Managed]...
+    [11:33:38] [INFO] Cookie: cf_clearance=SNMwlsKbfROOWr3FU0jgPn0WY3.z1sn5_b3W6aSRwh8-1690648414-0-160.0.0
+    [11:33:38] [INFO] User agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0
+    [11:33:38] [INFO] Writing Cloudflare clearance cookie information to cookies.json...
