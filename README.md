@@ -3,7 +3,7 @@
 A simple program for scraping Cloudflare clearance (cf_clearance) cookies from websites issuing Cloudflare challenges to visitors. This program works on all Cloudflare challenge types (JavaScript, managed, and interactive).
 
 > **Note**
-This program currently will not be able to solve interactive challenges due to an issue with Playwright. For more information, see https://github.com/microsoft/playwright/issues/21780. As a temporary solution, pass the `-d` flag and solve the challenge manually.
+This program currently will not be able to solve turnstile challenges due to an issue with Playwright. For more information, see https://github.com/microsoft/playwright/issues/21780. As a temporary solution, pass the `-d` flag and solve the challenge manually.
 
 ## Clearance Cookie Usage
 In order to bypass Cloudflare challenges with the clearance cookies, you must make sure of two things:
