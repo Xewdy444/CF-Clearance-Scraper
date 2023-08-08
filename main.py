@@ -30,7 +30,7 @@ class CloudflareSolver:
     ----------
     user_agent : str
         The user agent string to use for the browser requests.
-    timeout : int
+    timeout : float
         The browser default timeout in seconds.
     http2 : bool
         Enable or disable the usage of HTTP/2 for the browser requests.
@@ -46,7 +46,7 @@ class CloudflareSolver:
         self,
         *,
         user_agent: str,
-        timeout: int,
+        timeout: float,
         http2: bool,
         http3: bool,
         headless: bool,
@@ -68,7 +68,9 @@ class CloudflareSolver:
 
         context = browser.new_context(user_agent=user_agent)
         context.set_default_timeout(timeout * 1000)
+
         self.page = context.new_page()
+        self._timeout = timeout
 
     def __enter__(self) -> CloudflareSolver:
         return self
@@ -171,28 +173,25 @@ class CloudflareSolver:
 
     def solve_challenge(self) -> None:
         """Solve the Cloudflare challenge on the current page."""
-        verify_button_pattern = re.compile(
-            "Verify (I am|you are) (not a bot|(a )?human)"
-        )
-
-        verify_button = self.page.get_by_role("button", name=verify_button_pattern)
         challenge_spinner = self.page.locator("#challenge-spinner")
         challenge_stage = self.page.locator("div#challenge-stage")
+        start_timestamp = datetime.now()
 
         while (
             self.extract_clearance_cookie(self.cookies) is None
             and self.detect_challenge() is not None
+            and (datetime.now() - start_timestamp).seconds < self._timeout
         ):
             if challenge_spinner.is_visible():
                 challenge_spinner.wait_for(state="hidden")
 
-            if verify_button.is_visible():
-                verify_button.click()
-                challenge_stage.wait_for(state="hidden")
-            elif self._get_turnstile_frame() is not None:
-                turnstile_frame = self._get_turnstile_frame()
+            turnstile_frame = self._get_turnstile_frame()
+
+            if turnstile_frame is not None:
                 turnstile_frame.get_by_role("checkbox").click()
                 challenge_stage.wait_for(state="hidden")
+
+            self.page.wait_for_timeout(250)
 
 
 def main() -> None:
@@ -220,7 +219,7 @@ def main() -> None:
         "--timeout",
         default=30,
         help="The browser default timeout in seconds",
-        type=int,
+        type=float,
     )
 
     parser.add_argument(
