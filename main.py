@@ -173,6 +173,11 @@ class CloudflareSolver:
 
     def solve_challenge(self) -> None:
         """Solve the Cloudflare challenge on the current page."""
+        verify_button_pattern = re.compile(
+            "Verify (I am|you are) (not a bot|(a )?human)"
+        )
+
+        verify_button = self.page.get_by_role("button", name=verify_button_pattern)
         challenge_spinner = self.page.locator("#challenge-spinner")
         challenge_stage = self.page.locator("div#challenge-stage")
         start_timestamp = datetime.now()
@@ -187,7 +192,10 @@ class CloudflareSolver:
 
             turnstile_frame = self._get_turnstile_frame()
 
-            if turnstile_frame is not None:
+            if verify_button.is_visible():
+                verify_button.click()
+                challenge_stage.wait_for(state="hidden")
+            elif turnstile_frame is not None:
                 turnstile_frame.get_by_role("checkbox").click()
                 challenge_stage.wait_for(state="hidden")
 
