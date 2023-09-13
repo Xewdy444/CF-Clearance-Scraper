@@ -196,7 +196,7 @@ def main() -> None:
         "-t",
         "--timeout",
         default=30,
-        help="The timeout in seconds for browser actions and solving challenges.",
+        help="The timeout in seconds for browser actions and solving challenges",
         type=float,
     )
 
