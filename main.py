@@ -251,6 +251,7 @@ def main() -> None:
         level=logging_level,
     )
 
+    logging.getLogger("undetected_chromedriver").setLevel(logging.WARNING)
     logging.info("Launching %s browser...", "headed" if args.debug else "headless")
 
     challenge_messages = {
@@ -291,7 +292,7 @@ def main() -> None:
         clearance_cookie = solver.driver.get_cookie("cf_clearance")
 
     if clearance_cookie is None:
-        logging.error("Failed to retrieve the Cloudflare clearance cookie.")
+        logging.error("Failed to retrieve a Cloudflare clearance cookie.")
         return
 
     if not args.verbose:
