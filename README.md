@@ -1,9 +1,10 @@
 # CF-Clearance-Scraper
 
-A simple program for scraping Cloudflare clearance (cf_clearance) cookies from websites issuing Cloudflare challenges to visitors. This program works on all Cloudflare challenge types (JavaScript, managed, and interactive).
+## Playwright Version
+A simple program for scraping Cloudflare clearance (cf_clearance) cookies from websites issuing Cloudflare challenges to visitors. This program works on all Cloudflare challenge types (JavaScript, managed, and interactive). If you would prefer using undetected-chromedriver, check out the [undetected-chromedriver version](https://github.com/Xewdy444/CF-Clearance-Scraper/tree/undetected-chromedriver).
 
 > **Note**
-This program currently will not be able to solve turnstile challenges due to an issue with Playwright. For more information, see https://github.com/microsoft/playwright/issues/21780. As a temporary solution, pass the `-d` flag and solve the challenge manually.
+This program currently will not be able to solve turnstile challenges due to an issue with Playwright. For more information, see https://github.com/microsoft/playwright/issues/21780. As a temporary solution, pass the `-d` flag and solve the challenge manually or use the [undetected-chromedriver version](https://github.com/Xewdy444/CF-Clearance-Scraper/tree/undetected-chromedriver).
 
 ## Clearance Cookie Usage
 In order to bypass Cloudflare challenges with the clearance cookies, you must make sure of two things:
@@ -43,9 +44,9 @@ options:
   -h, --help            show this help message and exit
   -f FILE, --file FILE  The file to write the Cloudflare clearance cookie information to, in JSON format
   -t TIMEOUT, --timeout TIMEOUT
-                        The browser default timeout in seconds
+                        The timeout in seconds for browser actions and solving challenges
   -p PROXY, --proxy PROXY
-                        The proxy server URL to use for the browser requests (SOCKS5 proxy authentication is not supported)      
+                        The proxy server URL to use for the browser requests (SOCKS5 proxy authentication is not supported)
   -ua USER_AGENT, --user-agent USER_AGENT
                         The user agent to use for the browser requests
   --disable-http2       Disable the usage of HTTP/2 for the browser requests
