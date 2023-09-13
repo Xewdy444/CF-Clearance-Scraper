@@ -321,7 +321,7 @@ def main() -> None:
         clearance_cookie = solver.extract_clearance_cookie(solver.cookies)
 
     if clearance_cookie is None:
-        logging.error("Failed to retrieve the Cloudflare clearance cookie.")
+        logging.error("Failed to retrieve a Cloudflare clearance cookie.")
         return
 
     if not args.verbose:
