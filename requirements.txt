@@ -1,1 +1,2 @@
-playwright==1.37.0
+selenium==4.12.0
+undetected_chromedriver==3.5.3

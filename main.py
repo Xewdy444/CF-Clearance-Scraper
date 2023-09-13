@@ -3,15 +3,26 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import re
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, Iterable, List, Optional
 
-from playwright._impl._api_types import Error as PlaywrightError
-from playwright.sync_api import Frame, sync_playwright
+import selenium.webdriver.support.expected_conditions as EC
+import undetected_chromedriver as chromedriver
+from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.support.wait import WebDriverWait
+from undetected_chromedriver import By
 
 Cookie = Dict[str, Any]
+
+
+class ChallengeElements(Enum):
+    """Cloudflare challenge elements."""
+
+    CHALLENGE_STAGE = (By.CSS_SELECTOR, "#challenge-stage")
+    CHALLENGE_SPINNER = (By.CSS_SELECTOR, "#challenge-spinner")
+    TURNSTILE_CHECKBOX = (By.CSS_SELECTOR, "#challenge-stage > div > label > map > img")
 
 
 class ChallengePlatform(Enum):
@@ -31,11 +42,7 @@ class CloudflareSolver:
     user_agent : str
         The user agent string to use for the browser requests.
     timeout : float
-        The browser default timeout in seconds.
-    http2 : bool
-        Enable or disable the usage of HTTP/2 for the browser requests.
-    http3 : bool
-        Enable or disable the usage of HTTP/3 for the browser requests.
+        The action/solve timeout in seconds.
     headless : bool
         Enable or disable headless mode for the browser.
     proxy : Optional[str]
@@ -47,91 +54,32 @@ class CloudflareSolver:
         *,
         user_agent: str,
         timeout: float,
-        http2: bool,
-        http3: bool,
         headless: bool,
         proxy: Optional[str],
     ) -> None:
-        self._playwright = sync_playwright().start()
+        options = chromedriver.ChromeOptions()
+        options.add_argument(f"--user-agent={user_agent}")
 
         if proxy is not None:
-            proxy = self._parse_proxy(proxy)
+            options.add_argument(f"--proxy-server={proxy}")
 
-        browser = self._playwright.firefox.launch(
-            firefox_user_prefs={
-                "network.http.http2.enabled": http2,
-                "network.http.http3.enable": http3,
-            },
-            headless=headless,
-            proxy=proxy,
-        )
-
-        context = browser.new_context(user_agent=user_agent)
-        context.set_default_timeout(timeout * 1000)
-
-        self.page = context.new_page()
+        self.driver = chromedriver.Chrome(options=options, headless=headless)
+        self.driver.set_page_load_timeout(timeout)
         self._timeout = timeout
 
     def __enter__(self) -> CloudflareSolver:
         return self
 
     def __exit__(self, *args: Any) -> None:
-        self._playwright.stop()
-
-    @staticmethod
-    def _parse_proxy(proxy: str) -> Dict[str, str]:
-        """
-        Parse a proxy URL string into a dictionary of proxy parameters for the Playwright browser.
-
-        Parameters
-        ----------
-        proxy : str
-            Proxy URL string.
-
-        Returns
-        -------
-        Dict[str, str]
-            The dictionary of proxy parameters.
-        """
-        if "@" in proxy:
-            proxy_regex = re.match("(.+)://(.+):(.+)@(.+)", proxy)
-            server = f"{proxy_regex.group(1)}://{proxy_regex.group(4)}"
-
-            proxy_params = {
-                "server": server,
-                "username": proxy_regex.group(2),
-                "password": proxy_regex.group(3),
-            }
-        else:
-            proxy_params = {"server": proxy}
-
-        return proxy_params
-
-    def _get_turnstile_frame(self) -> Optional[Frame]:
-        """
-        Get the Cloudflare turnstile frame.
-
-        Returns
-        -------
-        Optional[Frame]
-            The Cloudflare turnstile frame.
-        """
-        for frame in self.page.frames:
-            if (
-                re.match(
-                    "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/[bg]/turnstile",
-                    frame.url,
-                )
-                is not None
-            ):
-                return frame
-
-        return None
+        try:
+            self.driver.quit()
+        except OSError:
+            pass
 
     @property
     def cookies(self) -> List[Cookie]:
-        """The cookies from the current page."""
-        return self.page.context.cookies()
+        """The cookies from the current session."""
+        return self.driver.get_cookies()
 
     @staticmethod
     def extract_clearance_cookie(cookies: Iterable[Cookie]) -> Optional[Cookie]:
@@ -163,7 +111,7 @@ class CloudflareSolver:
         Optional[ChallengePlatform]
             The Cloudflare challenge platform.
         """
-        html = self.page.content()
+        html = self.driver.page_source
 
         for platform in ChallengePlatform:
             if f"cType: '{platform.value}'" in html:
@@ -173,33 +121,58 @@ class CloudflareSolver:
 
     def solve_challenge(self) -> None:
         """Solve the Cloudflare challenge on the current page."""
-        verify_button_pattern = re.compile(
-            "Verify (I am|you are) (not a bot|(a )?human)"
-        )
-
-        verify_button = self.page.get_by_role("button", name=verify_button_pattern)
-        challenge_spinner = self.page.locator("#challenge-spinner")
-        challenge_stage = self.page.locator("div#challenge-stage")
         start_timestamp = datetime.now()
+
+        # TODO: Add check for simple button challenge
 
         while (
             self.extract_clearance_cookie(self.cookies) is None
             and self.detect_challenge() is not None
             and (datetime.now() - start_timestamp).seconds < self._timeout
         ):
-            if challenge_spinner.is_visible():
-                challenge_spinner.wait_for(state="hidden")
+            challenge_spinner = self.driver.find_element(
+                *ChallengeElements.CHALLENGE_SPINNER.value
+            )
 
-            turnstile_frame = self._get_turnstile_frame()
+            if challenge_spinner.is_displayed():
+                WebDriverWait(self.driver, self._timeout).until(
+                    EC.invisibility_of_element_located(
+                        ChallengeElements.CHALLENGE_SPINNER.value
+                    )
+                )
 
-            if verify_button.is_visible():
-                verify_button.click()
-                challenge_stage.wait_for(state="hidden")
-            elif turnstile_frame is not None:
-                turnstile_frame.get_by_role("checkbox").click()
-                challenge_stage.wait_for(state="hidden")
+            turnstile_frame = self.driver.find_element(
+                By.XPATH,
+                '//*[@title="Widget containing a Cloudflare security challenge"]',
+            )
 
-            self.page.wait_for_timeout(250)
+            if turnstile_frame.is_displayed():
+                self.driver.switch_to.frame(turnstile_frame)
+
+                WebDriverWait(self.driver, self._timeout).until(
+                    EC.visibility_of_element_located(
+                        ChallengeElements.TURNSTILE_CHECKBOX.value
+                    )
+                )
+
+                checkbox = self.driver.find_element(
+                    *ChallengeElements.TURNSTILE_CHECKBOX.value
+                )
+
+                actions = ActionChains(self.driver)
+                actions.move_to_element_with_offset(checkbox, 5, 7)
+                actions.click(checkbox)
+                actions.perform()
+
+                self.driver.switch_to.default_content()
+
+                WebDriverWait(self.driver, self._timeout).until(
+                    EC.invisibility_of_element_located(
+                        ChallengeElements.CHALLENGE_STAGE.value
+                    )
+                )
+
+            self.driver.implicitly_wait(0.25)
 
 
 def main() -> None:
@@ -226,7 +199,7 @@ def main() -> None:
         "-t",
         "--timeout",
         default=30,
-        help="The browser default timeout in seconds",
+        help="The action/solve timeout in seconds.",
         type=float,
     )
 
@@ -241,21 +214,9 @@ def main() -> None:
     parser.add_argument(
         "-ua",
         "--user-agent",
-        default="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0",
+        default="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36",
         help="The user agent to use for the browser requests",
         type=str,
-    )
-
-    parser.add_argument(
-        "--disable-http2",
-        action="store_true",
-        help="Disable the usage of HTTP/2 for the browser requests",
-    )
-
-    parser.add_argument(
-        "--disable-http3",
-        action="store_true",
-        help="Disable the usage of HTTP/3 for the browser requests",
     )
 
     parser.add_argument(
@@ -292,16 +253,14 @@ def main() -> None:
     with CloudflareSolver(
         user_agent=args.user_agent,
         timeout=args.timeout,
-        http2=not args.disable_http2,
-        http3=not args.disable_http3,
         headless=not args.debug,
         proxy=args.proxy,
     ) as solver:
         logging.info("Going to %s...", args.url)
 
         try:
-            solver.page.goto(args.url)
-        except PlaywrightError as err:
+            solver.driver.get(args.url)
+        except TimeoutException as err:
             logging.error(err)
             return
 
@@ -315,8 +274,8 @@ def main() -> None:
 
         try:
             solver.solve_challenge()
-        except PlaywrightError as err:
-            logging.error(err)
+        except TimeoutException:
+            pass
 
         clearance_cookie = solver.extract_clearance_cookie(solver.cookies)
 
