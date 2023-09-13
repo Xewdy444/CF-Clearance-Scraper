@@ -5,7 +5,7 @@ import json
 import logging
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Optional
 
 import selenium.webdriver.support.expected_conditions as EC
 import undetected_chromedriver as chromedriver
@@ -23,6 +23,10 @@ class ChallengeElements(Enum):
     CHALLENGE_STAGE = (By.CSS_SELECTOR, "#challenge-stage")
     CHALLENGE_SPINNER = (By.CSS_SELECTOR, "#challenge-spinner")
     TURNSTILE_CHECKBOX = (By.CSS_SELECTOR, "#challenge-stage > div > label > map > img")
+    VERIFY_BUTTON = (
+        By.XPATH,
+        '//*[contains(text(), "Verify (I am|you are) (not a bot|(a )?human)")]',
+    )
 
 
 class ChallengePlatform(Enum):
@@ -35,14 +39,18 @@ class ChallengePlatform(Enum):
 
 class CloudflareSolver:
     """
-    A class for solving Cloudflare challenges with Playwright.
+    A class for solving Cloudflare challenges with undetected-chromedriver.
 
     Parameters
     ----------
     user_agent : str
         The user agent string to use for the browser requests.
     timeout : float
-        The action/solve timeout in seconds.
+        The timeout in seconds for browser actions and solving challenges.
+    http2 : bool
+        Enable or disable the usage of HTTP/2 for the browser requests.
+    http3 : bool
+        Enable or disable the usage of HTTP/3 for the browser requests.
     headless : bool
         Enable or disable headless mode for the browser.
     proxy : Optional[str]
@@ -54,11 +62,19 @@ class CloudflareSolver:
         *,
         user_agent: str,
         timeout: float,
+        http2: bool,
+        http3: bool,
         headless: bool,
         proxy: Optional[str],
     ) -> None:
         options = chromedriver.ChromeOptions()
         options.add_argument(f"--user-agent={user_agent}")
+
+        if not http2:
+            options.add_argument("--disable-http2")
+
+        if not http3:
+            options.add_argument("--disable-quic")
 
         if proxy is not None:
             options.add_argument(f"--proxy-server={proxy}")
@@ -71,36 +87,7 @@ class CloudflareSolver:
         return self
 
     def __exit__(self, *args: Any) -> None:
-        try:
-            self.driver.quit()
-        except OSError:
-            pass
-
-    @property
-    def cookies(self) -> List[Cookie]:
-        """The cookies from the current session."""
-        return self.driver.get_cookies()
-
-    @staticmethod
-    def extract_clearance_cookie(cookies: Iterable[Cookie]) -> Optional[Cookie]:
-        """
-        Extract the Cloudflare clearance cookie from a list of cookies.
-
-        Parameters
-        ----------
-        cookies : Iterable[Cookie]
-            List of cookies.
-
-        Returns
-        -------
-        Optional[Cookie]
-            The Cloudflare clearance cookie. Returns None if the cookie is not found.
-        """
-        for cookie in cookies:
-            if cookie["name"] == "cf_clearance":
-                return cookie
-
-        return None
+        self.driver.quit()
 
     def detect_challenge(self) -> Optional[ChallengePlatform]:
         """
@@ -123,10 +110,8 @@ class CloudflareSolver:
         """Solve the Cloudflare challenge on the current page."""
         start_timestamp = datetime.now()
 
-        # TODO: Add check for simple button challenge
-
         while (
-            self.extract_clearance_cookie(self.cookies) is None
+            self.driver.get_cookie("cf_clearance") is None
             and self.detect_challenge() is not None
             and (datetime.now() - start_timestamp).seconds < self._timeout
         ):
@@ -141,12 +126,24 @@ class CloudflareSolver:
                     )
                 )
 
+            verify_button = self.driver.find_elements(
+                *ChallengeElements.VERIFY_BUTTON.value
+            )
+
             turnstile_frame = self.driver.find_element(
                 By.XPATH,
                 '//*[@title="Widget containing a Cloudflare security challenge"]',
             )
 
-            if turnstile_frame.is_displayed():
+            if verify_button:
+                verify_button[0].click()
+
+                WebDriverWait(self.driver, self._timeout).until(
+                    EC.invisibility_of_element_located(
+                        ChallengeElements.CHALLENGE_STAGE.value
+                    )
+                )
+            elif turnstile_frame.is_displayed():
                 self.driver.switch_to.frame(turnstile_frame)
 
                 WebDriverWait(self.driver, self._timeout).until(
@@ -199,7 +196,7 @@ def main() -> None:
         "-t",
         "--timeout",
         default=30,
-        help="The action/solve timeout in seconds.",
+        help="The timeout in seconds for browser actions and solving challenges.",
         type=float,
     )
 
@@ -217,6 +214,18 @@ def main() -> None:
         default="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36",
         help="The user agent to use for the browser requests",
         type=str,
+    )
+
+    parser.add_argument(
+        "--disable-http2",
+        action="store_true",
+        help="Disable the usage of HTTP/2 for the browser requests",
+    )
+
+    parser.add_argument(
+        "--disable-http3",
+        action="store_true",
+        help="Disable the usage of HTTP/3 for the browser requests",
     )
 
     parser.add_argument(
@@ -253,6 +262,8 @@ def main() -> None:
     with CloudflareSolver(
         user_agent=args.user_agent,
         timeout=args.timeout,
+        http2=not args.disable_http2,
+        http3=not args.disable_http3,
         headless=not args.debug,
         proxy=args.proxy,
     ) as solver:
@@ -277,7 +288,7 @@ def main() -> None:
         except TimeoutException:
             pass
 
-        clearance_cookie = solver.extract_clearance_cookie(solver.cookies)
+        clearance_cookie = solver.driver.get_cookie("cf_clearance")
 
     if clearance_cookie is None:
         logging.error("Failed to retrieve the Cloudflare clearance cookie.")
@@ -301,7 +312,7 @@ def main() -> None:
         json_data = {"clearance_cookies": []}
 
     # Get the unix timestamp using the cookie's expiration date minus one year
-    unix_timestamp = clearance_cookie["expires"] - 31557600
+    unix_timestamp = clearance_cookie["expiry"] - 31557600
     timestamp = datetime.utcfromtimestamp(unix_timestamp).isoformat()
 
     json_data["clearance_cookies"].append(
