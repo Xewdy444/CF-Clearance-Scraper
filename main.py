@@ -31,7 +31,7 @@ class CloudflareSolver:
     user_agent : str
         The user agent string to use for the browser requests.
     timeout : float
-        The browser default timeout in seconds.
+        The timeout in seconds for browser actions and solving challenges.
     http2 : bool
         Enable or disable the usage of HTTP/2 for the browser requests.
     http3 : bool
@@ -179,7 +179,7 @@ class CloudflareSolver:
 
         verify_button = self.page.get_by_role("button", name=verify_button_pattern)
         challenge_spinner = self.page.locator("#challenge-spinner")
-        challenge_stage = self.page.locator("div#challenge-stage")
+        challenge_stage = self.page.locator("#challenge-stage")
         start_timestamp = datetime.now()
 
         while (
@@ -226,7 +226,7 @@ def main() -> None:
         "-t",
         "--timeout",
         default=30,
-        help="The browser default timeout in seconds",
+        help="The timeout in seconds for browser actions and solving challenges",
         type=float,
     )
 
