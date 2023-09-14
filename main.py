@@ -11,8 +11,8 @@ import selenium.webdriver.support.expected_conditions as EC
 import undetected_chromedriver as chromedriver
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
-from undetected_chromedriver import By
 
 Cookie = Dict[str, Any]
 
@@ -132,7 +132,7 @@ class CloudflareSolver:
 
             turnstile_frame = self.driver.find_element(
                 By.XPATH,
-                '//*[@title="Widget containing a Cloudflare security challenge"]',
+                '//iframe[@title="Widget containing a Cloudflare security challenge"]',
             )
 
             if verify_button:
