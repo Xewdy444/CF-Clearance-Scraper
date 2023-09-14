@@ -25,7 +25,7 @@ class ChallengeElements(Enum):
     TURNSTILE_CHECKBOX = (By.CSS_SELECTOR, "#challenge-stage > div > label > map > img")
     VERIFY_BUTTON = (
         By.XPATH,
-        '//*[contains(text(), "Verify (I am|you are) (not a bot|(a )?human)")]',
+        '//input[@type="button" and contains(text(), "Verify (I am|you are) (not a bot|(a )?human)")]',
     )
 
 
@@ -146,14 +146,10 @@ class CloudflareSolver:
             elif turnstile_frame.is_displayed():
                 self.driver.switch_to.frame(turnstile_frame)
 
-                WebDriverWait(self.driver, self._timeout).until(
+                checkbox = WebDriverWait(self.driver, self._timeout).until(
                     EC.visibility_of_element_located(
                         ChallengeElements.TURNSTILE_CHECKBOX.value
                     )
-                )
-
-                checkbox = self.driver.find_element(
-                    *ChallengeElements.TURNSTILE_CHECKBOX.value
                 )
 
                 actions = ActionChains(self.driver)
