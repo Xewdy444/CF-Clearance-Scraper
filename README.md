@@ -40,7 +40,7 @@ Once the `Keychain Access` app opens, go to `File` > `Import Items`. Select the 
 > Depending on the user agent used, it may affect your ability to solve the Cloudflare challenge.
 
 ```
-usage: main.py [-h] [-f FILE] [-t TIMEOUT] [-p PROXY] [-ua USER_AGENT] [--disable-http2] [--disable-http3] [-d] [-v] URL
+usage: main.py [-h] [-f FILE] [-t TIMEOUT] [-p PROXY] [-ua USER_AGENT] [--disable-http2] [-d] [-v] URL
 
 A simple program for scraping Cloudflare clearance (cf_clearance) cookies from websites issuing Cloudflare challenges to visitors
 
@@ -51,13 +51,12 @@ options:
   -h, --help            show this help message and exit
   -f FILE, --file FILE  The file to write the Cloudflare clearance cookie information to, in JSON format
   -t TIMEOUT, --timeout TIMEOUT
-                        The timeout in seconds for browser actions and solving challenges
+                        The timeout in seconds to use for browser actions and solving challenges
   -p PROXY, --proxy PROXY
                         The proxy server URL to use for the browser requests
   -ua USER_AGENT, --user-agent USER_AGENT
                         The user agent to use for the browser requests
   --disable-http2       Disable the usage of HTTP/2 for the browser requests
-  --disable-http3       Disable the usage of HTTP/3 for the browser requests
   -d, --debug           Run the browser in headed mode
   -v, --verbose         Increase the output verbosity
 ```
