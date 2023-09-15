@@ -10,7 +10,6 @@ from typing import Any, Dict, Optional
 import selenium.webdriver.support.expected_conditions as EC
 import seleniumwire.undetected_chromedriver as chromedriver
 from selenium.common.exceptions import TimeoutException
-from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 
@@ -22,10 +21,17 @@ class ChallengeElements(Enum):
 
     CHALLENGE_STAGE = (By.CSS_SELECTOR, "#challenge-stage")
     CHALLENGE_SPINNER = (By.CSS_SELECTOR, "#challenge-spinner")
-    TURNSTILE_CHECKBOX = (By.CSS_SELECTOR, "#challenge-stage > div > label > map > img")
     TURNSTILE_FRAME = (
         By.XPATH,
         '//iframe[@title="Widget containing a Cloudflare security challenge"]',
+    )
+    TURNSTILE_CHECKBOX = (
+        By.CSS_SELECTOR,
+        "#challenge-stage > div > label > input[type=checkbox]",
+    )
+    TURNSTILE_TEXT = (
+        By.CSS_SELECTOR,
+        "#challenge-stage > div > label > span.ctp-label",
     )
     VERIFY_BUTTON = (
         By.XPATH,
@@ -150,17 +156,17 @@ class CloudflareSolver:
             elif turnstile_frame.is_displayed():
                 self.driver.switch_to.frame(turnstile_frame)
 
-                checkbox = WebDriverWait(self.driver, self._timeout).until(
-                    EC.visibility_of_element_located(
-                        ChallengeElements.TURNSTILE_CHECKBOX.value
+                WebDriverWait(self.driver, self._timeout).until(
+                    EC.text_to_be_present_in_element(
+                        ChallengeElements.TURNSTILE_TEXT.value, "Verify you are human"
                     )
                 )
 
-                actions = ActionChains(self.driver)
-                actions.move_to_element_with_offset(checkbox, 5, 7)
-                actions.click(checkbox)
-                actions.perform()
+                checkbox = self.driver.find_element(
+                    *ChallengeElements.TURNSTILE_CHECKBOX.value
+                )
 
+                checkbox.click()
                 self.driver.switch_to.default_content()
 
                 WebDriverWait(self.driver, self._timeout).until(
