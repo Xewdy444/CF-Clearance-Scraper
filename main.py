@@ -53,8 +53,6 @@ class CloudflareSolver:
         The timeout in seconds to use for browser actions and solving challenges.
     http2 : bool
         Enable or disable the usage of HTTP/2 for the browser requests.
-    http3 : bool
-        Enable or disable the usage of HTTP/3 for the browser requests.
     headless : bool
         Enable or disable headless mode for the browser.
     proxy : Optional[str]
@@ -67,7 +65,6 @@ class CloudflareSolver:
         user_agent: str,
         timeout: float,
         http2: bool,
-        http3: bool,
         headless: bool,
         proxy: Optional[str],
     ) -> None:
@@ -76,9 +73,6 @@ class CloudflareSolver:
 
         if not http2:
             options.add_argument("--disable-http2")
-
-        if not http3:
-            options.add_argument("--disable-quic")
 
         seleniumwire_options = {"disable_capture": True}
 
@@ -229,12 +223,6 @@ def main() -> None:
     )
 
     parser.add_argument(
-        "--disable-http3",
-        action="store_true",
-        help="Disable the usage of HTTP/3 for the browser requests",
-    )
-
-    parser.add_argument(
         "-d",
         "--debug",
         action="store_true",
@@ -271,7 +259,6 @@ def main() -> None:
         user_agent=args.user_agent,
         timeout=args.timeout,
         http2=not args.disable_http2,
-        http3=not args.disable_http3,
         headless=not args.debug,
         proxy=args.proxy,
     ) as solver:
