@@ -44,7 +44,7 @@ options:
   -h, --help            show this help message and exit
   -f FILE, --file FILE  The file to write the Cloudflare clearance cookie information to, in JSON format
   -t TIMEOUT, --timeout TIMEOUT
-                        The timeout in seconds for browser actions and solving challenges
+                        The timeout in seconds to use for browser actions and solving challenges
   -p PROXY, --proxy PROXY
                         The proxy server URL to use for the browser requests (SOCKS5 proxy authentication is not supported)
   -ua USER_AGENT, --user-agent USER_AGENT
