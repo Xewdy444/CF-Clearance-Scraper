@@ -23,6 +23,17 @@ flowchart
 ## Installation
     $ pip install -r requirements.txt
 
+Next, you'll need to install the CA certificate for Selenium Wire. First, download the certificate:
+
+    $ python -m seleniumwire extractcert
+
+Then, navigate to Chrome's settings. From there, go to `Privacy and security` > `Security` > `Manage device certificates`. The next steps will vary depending on your operating system.
+
+### Windows
+Once the `Certificates` menu opens, navigate to the `Trusted Root Certification Authorities` tab and click `Import`. Select the certificate you downloaded and click `Next`, `Next`, and `Finish`.
+
+### MacOS
+Once the `Keychain Access` app opens, go to `File` > `Import Items`. Select the certificate you downloaded and click `Open`. Navigate to the `Certificates` tab in the `Keychain Access` app. Right click the Selenium Wire CA certificate and select `Get Info`. Expand the `Trust` section and set `When using this certificate` to `Always Trust`.
 
 ## Usage
 > **Note**
@@ -42,7 +53,7 @@ options:
   -t TIMEOUT, --timeout TIMEOUT
                         The timeout in seconds for browser actions and solving challenges
   -p PROXY, --proxy PROXY
-                        The proxy server URL to use for the browser requests (SOCKS5 proxy authentication is not supported)
+                        The proxy server URL to use for the browser requests
   -ua USER_AGENT, --user-agent USER_AGENT
                         The user agent to use for the browser requests
   --disable-http2       Disable the usage of HTTP/2 for the browser requests

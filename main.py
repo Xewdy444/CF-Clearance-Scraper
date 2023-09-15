@@ -8,7 +8,7 @@ from enum import Enum
 from typing import Any, Dict, Optional
 
 import selenium.webdriver.support.expected_conditions as EC
-import undetected_chromedriver as chromedriver
+import seleniumwire.undetected_chromedriver as chromedriver
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
@@ -23,6 +23,10 @@ class ChallengeElements(Enum):
     CHALLENGE_STAGE = (By.CSS_SELECTOR, "#challenge-stage")
     CHALLENGE_SPINNER = (By.CSS_SELECTOR, "#challenge-spinner")
     TURNSTILE_CHECKBOX = (By.CSS_SELECTOR, "#challenge-stage > div > label > map > img")
+    TURNSTILE_FRAME = (
+        By.XPATH,
+        '//iframe[@title="Widget containing a Cloudflare security challenge"]',
+    )
     VERIFY_BUTTON = (
         By.XPATH,
         '//input[@type="button" and contains(text(), "Verify (I am|you are) (not a bot|(a )?human)")]',
@@ -76,10 +80,17 @@ class CloudflareSolver:
         if not http3:
             options.add_argument("--disable-quic")
 
-        if proxy is not None:
-            options.add_argument(f"--proxy-server={proxy}")
+        seleniumwire_options = {"disable_capture": True}
 
-        self.driver = chromedriver.Chrome(options=options, headless=headless)
+        if proxy is not None:
+            seleniumwire_options["proxy"] = {"http": proxy, "https": proxy}
+
+        self.driver = chromedriver.Chrome(
+            seleniumwire_options=seleniumwire_options,
+            options=options,
+            headless=headless,
+        )
+
         self.driver.set_page_load_timeout(timeout)
         self._timeout = timeout
 
@@ -131,8 +142,7 @@ class CloudflareSolver:
             )
 
             turnstile_frame = self.driver.find_element(
-                By.XPATH,
-                '//iframe[@title="Widget containing a Cloudflare security challenge"]',
+                *ChallengeElements.TURNSTILE_FRAME.value
             )
 
             if verify_button:
@@ -200,7 +210,7 @@ def main() -> None:
         "-p",
         "--proxy",
         default=None,
-        help="The proxy server URL to use for the browser requests (SOCKS5 proxy authentication is not supported)",
+        help="The proxy server URL to use for the browser requests",
         type=str,
     )
 
@@ -247,6 +257,7 @@ def main() -> None:
         level=logging_level,
     )
 
+    logging.getLogger("seleniumwire").setLevel(logging.WARNING)
     logging.getLogger("undetected_chromedriver").setLevel(logging.WARNING)
     logging.info("Launching %s browser...", "headed" if args.debug else "headless")
 
