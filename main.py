@@ -31,7 +31,7 @@ class CloudflareSolver:
     user_agent : str
         The user agent string to use for the browser requests.
     timeout : float
-        The timeout in seconds for browser actions and solving challenges.
+        The timeout in seconds to use for browser actions and solving challenges.
     http2 : bool
         Enable or disable the usage of HTTP/2 for the browser requests.
     http3 : bool
@@ -226,7 +226,7 @@ def main() -> None:
         "-t",
         "--timeout",
         default=30,
-        help="The timeout in seconds for browser actions and solving challenges",
+        help="The timeout in seconds to use for browser actions and solving challenges",
         type=float,
     )
 
