@@ -21,9 +21,12 @@ flowchart
 ```
 
 ## Installation
+
     $ pip install -r requirements.txt
 
-Next, you'll need to install the CA certificate for Selenium Wire. First, download the certificate:
+### Selenium Wire CA Certificate
+
+You'll need to install the CA certificate for Selenium Wire. First, download the certificate:
 
     $ python -m seleniumwire extractcert
 
