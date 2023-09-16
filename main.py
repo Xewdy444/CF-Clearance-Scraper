@@ -19,19 +19,13 @@ Cookie = Dict[str, Any]
 class ChallengeElements(Enum):
     """Cloudflare challenge elements."""
 
-    CHALLENGE_STAGE = (By.CSS_SELECTOR, "#challenge-stage")
-    CHALLENGE_SPINNER = (By.CSS_SELECTOR, "#challenge-spinner")
+    CHALLENGE_SPINNER = (By.XPATH, '//div[@id="challenge-spinner"]')
+    CHALLENGE_STAGE = (By.XPATH, '//div[@id="challenge-stage"]')
+    TURNSTILE_TEXT = (By.XPATH, '//div[@id="challenge-stage"]/div/label/span[2]')
+    TURNSTILE_CHECKBOX = (By.XPATH, '//div[@id="challenge-stage"]/div/label/input')
     TURNSTILE_FRAME = (
         By.XPATH,
         '//iframe[@title="Widget containing a Cloudflare security challenge"]',
-    )
-    TURNSTILE_CHECKBOX = (
-        By.CSS_SELECTOR,
-        "#challenge-stage > div > label > input[type=checkbox]",
-    )
-    TURNSTILE_TEXT = (
-        By.CSS_SELECTOR,
-        "#challenge-stage > div > label > span.ctp-label",
     )
     VERIFY_BUTTON = (
         By.XPATH,
