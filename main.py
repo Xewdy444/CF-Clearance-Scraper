@@ -81,7 +81,8 @@ class CloudflareSolver:
     @staticmethod
     def _parse_proxy(proxy: str) -> Dict[str, str]:
         """
-        Parse a proxy URL string into a dictionary of proxy parameters for the Playwright browser.
+        Parse a proxy URL string into a dictionary of proxy parameters for
+        the Playwright browser.
 
         Parameters
         ----------
