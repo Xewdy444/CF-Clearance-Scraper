@@ -20,6 +20,28 @@ flowchart
 	N14e --> N150
 ```
 
+## Docker
+
+### Build
+
+    $ docker build -t cf-clearance-scraper .
+
+### Run
+
+    $ docker run --rm cf-clearance-scraper -v https://nowsecure.nl
+
+### Run With Volume
+> **Note**
+> The volume is only necessary if you want to save the cookies to a file on your host machine.
+
+#### Linux/MacOS
+
+    $ docker run --rm -v ./cookies:/app/cookies cf-clearance-scraper -v -f ./cookies/cookies.json https://nowsecure.nl
+
+#### Windows
+
+    $ docker run --rm -v .\cookies:/app/cookies cf-clearance-scraper -v -f ./cookies/cookies.json https://nowsecure.nl
+
 ## Installation
 
     $ pip install -r requirements.txt
