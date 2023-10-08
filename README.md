@@ -21,11 +21,7 @@ flowchart
 ```
 
 ## Docker
-
-### Build
     $ docker build -t cf-clearance-scraper:latest .
-
-### Run
     $ docker run --rm cf-clearance-scraper:latest -v https://nowsecure.nl
 
 ### Run With Volume
@@ -38,7 +34,6 @@ flowchart
     $ pip install -r requirements.txt
 
 ### Selenium Wire CA Certificate
-
 You'll need to install the CA certificate for Selenium Wire. First, download the certificate:
 
     $ python -m seleniumwire extractcert
