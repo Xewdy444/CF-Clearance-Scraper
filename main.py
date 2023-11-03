@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import time
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, Optional
@@ -169,7 +170,7 @@ class CloudflareSolver:
                     )
                 )
 
-            self.driver.implicitly_wait(0.25)
+            time.sleep(0.25)
 
 
 def main() -> None:
