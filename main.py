@@ -4,14 +4,26 @@ import argparse
 import json
 import logging
 import re
+import urllib.parse as urlparse
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, TypedDict
 
 from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import Frame, sync_playwright
 
-Cookie = Dict[str, Any]
+
+class Cookie(TypedDict):
+    """A dictionary representing a browser cookie."""
+
+    name: str
+    value: str
+    domain: str
+    path: str
+    expires: int
+    http_only: bool
+    secure: bool
+    same_site: str
 
 
 class ChallengePlatform(Enum):
@@ -75,7 +87,7 @@ class CloudflareSolver:
     def __enter__(self) -> CloudflareSolver:
         return self
 
-    def __exit__(self, *args: Any) -> None:
+    def __exit__(self, *_: Any) -> None:
         self._playwright.stop()
 
     @staticmethod
@@ -94,17 +106,17 @@ class CloudflareSolver:
         Dict[str, str]
             The dictionary of proxy parameters.
         """
-        if "@" in proxy:
-            proxy_regex = re.match("(.+)://(.+):(.+)@(.+)", proxy)
-            server = f"{proxy_regex.group(1)}://{proxy_regex.group(4)}"
+        parsed_proxy = urlparse.urlparse(proxy)
+        server = f"{parsed_proxy.scheme}://{parsed_proxy.hostname}"
 
-            proxy_params = {
-                "server": server,
-                "username": proxy_regex.group(2),
-                "password": proxy_regex.group(3),
-            }
-        else:
-            proxy_params = {"server": proxy}
+        if parsed_proxy.port is not None:
+            server += f":{parsed_proxy.port}"
+
+        proxy_params = {"server": server}
+
+        if parsed_proxy.username is not None and parsed_proxy.password is not None:
+            proxy_params["username"] = parsed_proxy.username
+            proxy_params["password"] = parsed_proxy.password
 
         return proxy_params
 
@@ -117,17 +129,11 @@ class CloudflareSolver:
         Optional[Frame]
             The Cloudflare turnstile frame.
         """
-        for frame in self.page.frames:
-            if (
-                re.match(
-                    "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/[bg]/turnstile",
-                    frame.url,
-                )
-                is not None
-            ):
-                return frame
-
-        return None
+        return self.page.frame(
+            url=re.compile(
+                "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/[bg]/turnstile"
+            ),
+        )
 
     @property
     def cookies(self) -> List[Cookie]:
@@ -242,7 +248,7 @@ def main() -> None:
     parser.add_argument(
         "-ua",
         "--user-agent",
-        default="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/117.0",
+        default="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/119.0",
         help="The user agent to use for the browser requests",
         type=str,
     )
@@ -326,7 +332,7 @@ def main() -> None:
         return
 
     if not args.verbose:
-        print(clearance_cookie["value"])
+        print(f'cf_clearance={clearance_cookie["value"]}')
 
     logging.info("Cookie: cf_clearance=%s", clearance_cookie["value"])
     logging.info("User agent: %s", args.user_agent)
