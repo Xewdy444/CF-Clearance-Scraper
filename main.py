@@ -8,7 +8,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, Iterable, List, Optional
 
-from playwright._impl._api_types import Error as PlaywrightError
+from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import Frame, sync_playwright
 
 Cookie = Dict[str, Any]
