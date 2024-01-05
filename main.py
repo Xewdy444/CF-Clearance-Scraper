@@ -7,23 +7,11 @@ import re
 import urllib.parse as urlparse
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, Iterable, List, Optional, TypedDict
+from typing import Any, Dict, Iterable, List, Optional
 
+from playwright.sync_api import Cookie
 from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import Frame, sync_playwright
-
-
-class Cookie(TypedDict):
-    """A dictionary representing a browser cookie."""
-
-    name: str
-    value: str
-    domain: str
-    path: str
-    expires: int
-    http_only: bool
-    secure: bool
-    same_site: str
 
 
 class ChallengePlatform(Enum):
