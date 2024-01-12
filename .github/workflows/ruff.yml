@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - undetected-chromedriver
   pull_request:
 
 permissions:
@@ -18,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v3
+      - uses: actions/setup-python@v5
         with:
           python-version: 3.x
 
@@ -29,7 +30,9 @@ jobs:
 
       - name: Run ruff
         run: ruff check
-          --exit-zero --output-format sarif > ruff-results.sarif
+          --no-cache
+          --exit-zero
+          --output-format sarif > ruff-results.sarif
 
       - name: Upload ruff results to GitHub
         uses: github/codeql-action/upload-sarif@v2
