@@ -338,7 +338,7 @@ def main() -> None:
 
     # Get the unix timestamp using the cookie's expiration date minus one year
     unix_timestamp = clearance_cookie["expires"] - 31557600
-    timestamp = datetime.utcfromtimestamp(unix_timestamp).isoformat()
+    timestamp = datetime.fromtimestamp(unix_timestamp).isoformat()
 
     json_data["clearance_cookies"].append(
         {
