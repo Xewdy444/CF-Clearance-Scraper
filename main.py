@@ -4,17 +4,15 @@ import argparse
 import json
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import selenium.webdriver.support.expected_conditions as EC
 import seleniumwire.undetected_chromedriver as chromedriver
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
-
-Cookie = Dict[str, Any]
 
 
 class ChallengeElements(Enum):
@@ -92,7 +90,7 @@ class CloudflareSolver:
     def __enter__(self) -> CloudflareSolver:
         return self
 
-    def __exit__(self, *args: Any) -> None:
+    def __exit__(self, *_: Any) -> None:
         self.driver.quit()
 
     def detect_challenge(self) -> Optional[ChallengePlatform]:
@@ -291,7 +289,7 @@ def main() -> None:
         return
 
     if not args.verbose:
-        print(clearance_cookie["value"])
+        print(f'cf_clearance={clearance_cookie["value"]}')
 
     logging.info("Cookie: cf_clearance=%s", clearance_cookie["value"])
     logging.info("User agent: %s", args.user_agent)
@@ -307,13 +305,13 @@ def main() -> None:
     except (FileNotFoundError, json.JSONDecodeError):
         json_data = {"clearance_cookies": []}
 
-    # Get the unix timestamp using the cookie's expiration date minus one year
-    unix_timestamp = clearance_cookie["expiry"] - 31557600
-    timestamp = datetime.utcfromtimestamp(unix_timestamp).isoformat()
+    local_timezone = datetime.now(timezone.utc).astimezone().tzinfo
+    unix_timestamp = clearance_cookie["expires"] - timedelta(days=365).total_seconds()
+    timestamp = datetime.fromtimestamp(unix_timestamp, tz=local_timezone).isoformat()
 
     json_data["clearance_cookies"].append(
         {
-            "unix_timestamp": unix_timestamp,
+            "unix_timestamp": int(unix_timestamp),
             "timestamp": timestamp,
             "domain": clearance_cookie["domain"],
             "cf_clearance": clearance_cookie["value"],
