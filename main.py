@@ -5,7 +5,7 @@ import json
 import logging
 import re
 import urllib.parse as urlparse
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Dict, Iterable, List, Optional
 
@@ -336,13 +336,13 @@ def main() -> None:
     except (FileNotFoundError, json.JSONDecodeError):
         json_data = {"clearance_cookies": []}
 
-    # Get the unix timestamp using the cookie's expiration date minus one year
-    unix_timestamp = clearance_cookie["expires"] - 31554000
-    timestamp = datetime.fromtimestamp(unix_timestamp, tz=timezone.utc).isoformat()
+    local_timezone = datetime.now(timezone.utc).astimezone().tzinfo
+    unix_timestamp = clearance_cookie["expires"] - timedelta(days=365).total_seconds()
+    timestamp = datetime.fromtimestamp(unix_timestamp, tz=local_timezone).isoformat()
 
     json_data["clearance_cookies"].append(
         {
-            "unix_timestamp": unix_timestamp,
+            "unix_timestamp": int(unix_timestamp),
             "timestamp": timestamp,
             "domain": clearance_cookie["domain"],
             "cf_clearance": clearance_cookie["value"],
