@@ -103,8 +103,9 @@ class CloudflareSolver:
         proxy_params = {"server": server}
 
         if parsed_proxy.username is not None and parsed_proxy.password is not None:
-            proxy_params["username"] = parsed_proxy.username
-            proxy_params["password"] = parsed_proxy.password
+            proxy_params.update(
+                {"username": parsed_proxy.username, "password": parsed_proxy.password}
+            )
 
         return proxy_params
 
@@ -300,6 +301,17 @@ def main() -> None:
             logging.error(err)
             return
 
+        clearance_cookie = solver.extract_clearance_cookie(solver.cookies)
+
+        if clearance_cookie is not None:
+            logging.info("Cookie: cf_clearance=%s", clearance_cookie["value"])
+            logging.info("User agent: %s", args.user_agent)
+
+            if not args.verbose:
+                print(f'cf_clearance={clearance_cookie["value"]}')
+
+            return
+
         challenge_platform = solver.detect_challenge()
 
         if challenge_platform is None:
@@ -319,11 +331,11 @@ def main() -> None:
         logging.error("Failed to retrieve a Cloudflare clearance cookie.")
         return
 
-    if not args.verbose:
-        print(f'cf_clearance={clearance_cookie["value"]}')
-
     logging.info("Cookie: cf_clearance=%s", clearance_cookie["value"])
     logging.info("User agent: %s", args.user_agent)
+
+    if not args.verbose:
+        print(f'cf_clearance={clearance_cookie["value"]}')
 
     if args.file is None:
         return
