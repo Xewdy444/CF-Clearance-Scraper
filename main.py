@@ -269,6 +269,17 @@ def main() -> None:
             logging.error(err)
             return
 
+        clearance_cookie = solver.driver.get_cookie("cf_clearance")
+
+        if clearance_cookie is not None:
+            logging.info("Cookie: cf_clearance=%s", clearance_cookie["value"])
+            logging.info("User agent: %s", args.user_agent)
+
+            if not args.verbose:
+                print(f'cf_clearance={clearance_cookie["value"]}')
+
+            return
+
         challenge_platform = solver.detect_challenge()
 
         if challenge_platform is None:
@@ -288,11 +299,11 @@ def main() -> None:
         logging.error("Failed to retrieve a Cloudflare clearance cookie.")
         return
 
-    if not args.verbose:
-        print(f'cf_clearance={clearance_cookie["value"]}')
-
     logging.info("Cookie: cf_clearance=%s", clearance_cookie["value"])
     logging.info("User agent: %s", args.user_agent)
+
+    if not args.verbose:
+        print(f'cf_clearance={clearance_cookie["value"]}')
 
     if args.file is None:
         return
