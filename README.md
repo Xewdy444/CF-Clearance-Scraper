@@ -8,7 +8,7 @@ In order to bypass Cloudflare challenges with the clearance cookies, you must ma
 
 - The user agent used to fetch the clearance cookie must match the user agent being used within the requests that use the clearance cookie
     > **Note**
-    > The default user agent used by the scraper is `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36`.
+    > The default user agent used by the scraper is `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36`.
 - The IP address used to fetch the clearance cookie must match the IP address being used to make the requests that use the clearance cookie
 
 ```mermaid
@@ -20,31 +20,8 @@ flowchart
 	N14e --> N150
 ```
 
-## Docker
-    $ docker build -t cf-clearance-scraper:latest .
-    $ docker run --rm cf-clearance-scraper:latest -v https://nowsecure.nl
-
-### Run With Volume
-> **Note**
-> The volume is only necessary if you want to save the cookies to a file on your host machine.
-
-    $ docker run --rm -v ./cookies:/app/cookies cf-clearance-scraper:latest -v -f ./cookies/cookies.json https://nowsecure.nl
-
 ## Installation
     $ pip install -r requirements.txt
-
-### Selenium Wire CA Certificate
-You'll need to install the CA certificate for Selenium Wire. First, download the certificate:
-
-    $ python -m seleniumwire extractcert
-
-Then, navigate to Chrome's settings. From there, go to `Privacy and security` > `Security` > `Manage device certificates`. The next steps will vary depending on your operating system.
-
-### Windows
-Once the `Certificates` menu opens, navigate to the `Trusted Root Certification Authorities` tab and click `Import`. Select the certificate you downloaded and click `Next`, `Next`, and `Finish`.
-
-### MacOS
-Once the `Keychain Access` app opens, go to `File` > `Import Items`. Select the certificate you downloaded and click `Open`. Navigate to the `Certificates` tab in the `Keychain Access` app. Right click the Selenium Wire CA certificate and select `Get Info`. Expand the `Trust` section and set `When using this certificate` to `Always Trust`.
 
 ## Usage
 > **Note**
@@ -78,5 +55,5 @@ options:
     [11:33:34] [INFO] Going to https://nowsecure.nl...
     [11:33:34] [INFO] Solving Cloudflare challenge [Managed]...
     [11:33:38] [INFO] Cookie: cf_clearance=SNMwlsKbfROOWr3FU0jgPn0WY3.z1sn5_b3W6aSRwh8-1690648414-0-160.0.0
-    [11:33:38] [INFO] User agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36
+    [11:33:38] [INFO] User agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36
     [11:33:38] [INFO] Writing Cloudflare clearance cookie information to cookies.json...

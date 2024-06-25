@@ -9,19 +9,20 @@ from enum import Enum
 from typing import Any, Optional
 
 import selenium.webdriver.support.expected_conditions as EC
-import seleniumwire.undetected_chromedriver as chromedriver
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.expected_conditions import staleness_of
 from selenium.webdriver.support.wait import WebDriverWait
+from selenium_authenticated_proxy import SeleniumAuthenticatedProxy
+from undetected_chromedriver import Chrome, ChromeOptions
 
 
 class ChallengeElements(Enum):
     """Cloudflare challenge elements."""
 
-    CHALLENGE_SPINNER = (By.XPATH, '//div[@id="challenge-spinner"]')
-    CHALLENGE_STAGE = (By.XPATH, '//div[@id="challenge-stage"]')
-    TURNSTILE_TEXT = (By.XPATH, '//div[@id="challenge-stage"]/div/label/span[2]')
-    TURNSTILE_CHECKBOX = (By.XPATH, '//div[@id="challenge-stage"]/div/label/input')
+    CHALLENGE_SPINNER = (By.XPATH, "/html/body/div[1]/div/div[2]")
+    TURNSTILE_TEXT = (By.XPATH, "/html/body/div/div/div[1]/div/label/span[2]")
+    TURNSTILE_CHECKBOX = (By.XPATH, "/html/body/div/div/div[1]/div/label/input")
     TURNSTILE_FRAME = (
         By.XPATH,
         '//iframe[@title="Widget containing a Cloudflare security challenge"]',
@@ -67,23 +68,20 @@ class CloudflareSolver:
         headless: bool,
         proxy: Optional[str],
     ) -> None:
-        options = chromedriver.ChromeOptions()
+        options = ChromeOptions()
         options.add_argument(f"--user-agent={user_agent}")
 
         if not http2:
             options.add_argument("--disable-http2")
 
-        seleniumwire_options = {"disable_capture": True}
+        if headless:
+            options.add_argument("--headless=new")
 
         if proxy is not None:
-            seleniumwire_options["proxy"] = {"http": proxy, "https": proxy}
+            auth_proxy = SeleniumAuthenticatedProxy(proxy, use_legacy_extension=True)
+            auth_proxy.enrich_chrome_options(options)
 
-        self.driver = chromedriver.Chrome(
-            seleniumwire_options=seleniumwire_options,
-            options=options,
-            headless=headless,
-        )
-
+        self.driver = Chrome(options=options)
         self.driver.set_page_load_timeout(timeout)
         self._timeout = timeout
 
@@ -119,11 +117,11 @@ class CloudflareSolver:
             and self.detect_challenge() is not None
             and (datetime.now() - start_timestamp).seconds < self._timeout
         ):
-            challenge_spinner = self.driver.find_element(
+            challenge_spinner = self.driver.find_elements(
                 *ChallengeElements.CHALLENGE_SPINNER.value
             )
 
-            if challenge_spinner.is_displayed():
+            if challenge_spinner and challenge_spinner[0].is_displayed():
                 WebDriverWait(self.driver, self._timeout).until(
                     EC.invisibility_of_element_located(
                         ChallengeElements.CHALLENGE_SPINNER.value
@@ -134,7 +132,7 @@ class CloudflareSolver:
                 *ChallengeElements.VERIFY_BUTTON.value
             )
 
-            turnstile_frame = self.driver.find_element(
+            turnstile_frame = self.driver.find_elements(
                 *ChallengeElements.TURNSTILE_FRAME.value
             )
 
@@ -142,12 +140,10 @@ class CloudflareSolver:
                 verify_button[0].click()
 
                 WebDriverWait(self.driver, self._timeout).until(
-                    EC.invisibility_of_element_located(
-                        ChallengeElements.CHALLENGE_STAGE.value
-                    )
+                    staleness_of(self.driver.find_element(By.TAG_NAME, "html"))
                 )
-            elif turnstile_frame.is_displayed():
-                self.driver.switch_to.frame(turnstile_frame)
+            elif turnstile_frame and turnstile_frame[0].is_displayed():
+                self.driver.switch_to.frame(turnstile_frame[0])
 
                 WebDriverWait(self.driver, self._timeout).until(
                     EC.text_to_be_present_in_element(
@@ -163,9 +159,7 @@ class CloudflareSolver:
                 self.driver.switch_to.default_content()
 
                 WebDriverWait(self.driver, self._timeout).until(
-                    EC.invisibility_of_element_located(
-                        ChallengeElements.CHALLENGE_STAGE.value
-                    )
+                    staleness_of(self.driver.find_element(By.TAG_NAME, "html"))
                 )
 
             time.sleep(0.25)
@@ -210,7 +204,7 @@ def main() -> None:
     parser.add_argument(
         "-ua",
         "--user-agent",
-        default="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36",
+        default="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
         help="The user agent to use for the browser requests",
         type=str,
     )
@@ -244,7 +238,6 @@ def main() -> None:
         level=logging_level,
     )
 
-    logging.getLogger("seleniumwire").setLevel(logging.WARNING)
     logging.getLogger("undetected_chromedriver").setLevel(logging.WARNING)
     logging.info("Launching %s browser...", "headed" if args.debug else "headless")
 
