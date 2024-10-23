@@ -8,7 +8,7 @@ In order to bypass Cloudflare challenges with the clearance cookies, you must ma
 
 - The user agent used to fetch the clearance cookie must match the user agent being used within the requests that use the clearance cookie
     > **Note**
-    > The default user agent used by the scraper is `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36`.
+    > The default user agent used by the scraper is `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36`.
 - The IP address used to fetch the clearance cookie must match the IP address being used to make the requests that use the clearance cookie
 
 ```mermaid
@@ -55,5 +55,5 @@ options:
     [11:33:34] [INFO] Going to https://nowsecure.nl...
     [11:33:34] [INFO] Solving Cloudflare challenge [Managed]...
     [11:33:38] [INFO] Cookie: cf_clearance=SNMwlsKbfROOWr3FU0jgPn0WY3.z1sn5_b3W6aSRwh8-1690648414-0-160.0.0
-    [11:33:38] [INFO] User agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36
+    [11:33:38] [INFO] User agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36
     [11:33:38] [INFO] Writing Cloudflare clearance cookie information to cookies.json...

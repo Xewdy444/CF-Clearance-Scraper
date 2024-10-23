@@ -204,7 +204,7 @@ def main() -> None:
     parser.add_argument(
         "-ua",
         "--user-agent",
-        default="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+        default="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
         help="The user agent to use for the browser requests",
         type=str,
     )
