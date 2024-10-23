@@ -1,17 +1,33 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import json
 import logging
-import re
-import urllib.parse as urlparse
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Iterable, List, Optional
 
-from playwright.sync_api import Cookie
-from playwright.sync_api import Error as PlaywrightError
-from playwright.sync_api import Frame, sync_playwright
+import nodriver
+from nodriver.cdp.network import Cookie
+from nodriver.core.element import Element
+from selenium.common.exceptions import TimeoutException
+from selenium_authenticated_proxy import SeleniumAuthenticatedProxy
+
+
+class NodriverOptions(list):
+    """A class for managing nodriver options."""
+
+    def add_argument(self, arg: str) -> None:
+        """
+        Add an argument to the list of arguments.
+
+        Parameters
+        ----------
+        arg : str
+            The argument
+        """
+        self.append(arg)
 
 
 class ChallengePlatform(Enum):
@@ -24,7 +40,7 @@ class ChallengePlatform(Enum):
 
 class CloudflareSolver:
     """
-    A class for solving Cloudflare challenges with Playwright.
+    A class for solving Cloudflare challenges with undetected-chromedriver.
 
     Parameters
     ----------
@@ -34,8 +50,6 @@ class CloudflareSolver:
         The timeout in seconds to use for browser actions and solving challenges.
     http2 : bool
         Enable or disable the usage of HTTP/2 for the browser requests.
-    http3 : bool
-        Enable or disable the usage of HTTP/3 for the browser requests.
     headless : bool
         Enable or disable headless mode for the browser.
     proxy : Optional[str]
@@ -48,89 +62,49 @@ class CloudflareSolver:
         user_agent: str,
         timeout: float,
         http2: bool,
-        http3: bool,
         headless: bool,
         proxy: Optional[str],
     ) -> None:
-        self._playwright = sync_playwright().start()
+        options = NodriverOptions()
+        options.add_argument(f"user-agent={user_agent}")
+
+        if not http2:
+            options.add_argument("--disable-http2")
 
         if proxy is not None:
-            proxy = self._parse_proxy(proxy)
+            auth_proxy = SeleniumAuthenticatedProxy(proxy, use_legacy_extension=True)
+            auth_proxy.enrich_chrome_options(options)
 
-        browser = self._playwright.firefox.launch(
-            firefox_user_prefs={
-                "network.http.http2.enabled": http2,
-                "network.http.http3.enable": http3,
-            },
-            headless=headless,
-            proxy=proxy,
-        )
-
-        context = browser.new_context(user_agent=user_agent)
-        context.set_default_timeout(timeout * 1000)
-
-        self.page = context.new_page()
+        config = nodriver.Config(headless=headless, browser_args=options)
+        self.driver = nodriver.Browser(config)
         self._timeout = timeout
 
-    def __enter__(self) -> CloudflareSolver:
+    async def __aenter__(self) -> CloudflareSolver:
+        await self.start()
         return self
 
-    def __exit__(self, *_: Any) -> None:
-        self._playwright.stop()
+    async def __aexit__(self, *_: Any) -> None:
+        self.driver.stop()
 
-    @staticmethod
-    def _parse_proxy(proxy: str) -> Dict[str, str]:
+    async def start(self) -> None:
+        """Start the browser."""
+        await self.driver.start()
+
+    async def get_cookies(self) -> List[Cookie]:
         """
-        Parse a proxy URL string into a dictionary of proxy parameters for
-        the Playwright browser.
-
-        Parameters
-        ----------
-        proxy : str
-            Proxy URL string.
+        Get all cookies from the current page.
 
         Returns
         -------
-        Dict[str, str]
-            The dictionary of proxy parameters.
+        List[Cookie]
+            List of cookies.
         """
-        parsed_proxy = urlparse.urlparse(proxy)
-        server = f"{parsed_proxy.scheme}://{parsed_proxy.hostname}"
-
-        if parsed_proxy.port is not None:
-            server += f":{parsed_proxy.port}"
-
-        proxy_params = {"server": server}
-
-        if parsed_proxy.username is not None and parsed_proxy.password is not None:
-            proxy_params.update(
-                {"username": parsed_proxy.username, "password": parsed_proxy.password}
-            )
-
-        return proxy_params
-
-    def _get_turnstile_frame(self) -> Optional[Frame]:
-        """
-        Get the Cloudflare turnstile frame.
-
-        Returns
-        -------
-        Optional[Frame]
-            The Cloudflare turnstile frame.
-        """
-        return self.page.frame(
-            url=re.compile(
-                "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/[bg]/turnstile"
-            ),
-        )
-
-    @property
-    def cookies(self) -> List[Cookie]:
-        """The cookies from the current page."""
-        return self.page.context.cookies()
+        return await self.driver.cookies.get_all()
 
     @staticmethod
-    def extract_clearance_cookie(cookies: Iterable[Cookie]) -> Optional[Cookie]:
+    def extract_clearance_cookie(
+        cookies: Iterable[Cookie],
+    ) -> Optional[Cookie]:
         """
         Extract the Cloudflare clearance cookie from a list of cookies.
 
@@ -144,13 +118,14 @@ class CloudflareSolver:
         Optional[Cookie]
             The Cloudflare clearance cookie. Returns None if the cookie is not found.
         """
+
         for cookie in cookies:
-            if cookie["name"] == "cf_clearance":
+            if cookie.name == "cf_clearance":
                 return cookie
 
         return None
 
-    def detect_challenge(self) -> Optional[ChallengePlatform]:
+    async def detect_challenge(self) -> Optional[ChallengePlatform]:
         """
         Detect the Cloudflare challenge platform on the current page.
 
@@ -159,7 +134,7 @@ class CloudflareSolver:
         Optional[ChallengePlatform]
             The Cloudflare challenge platform.
         """
-        html = self.page.content()
+        html: str = await self.driver.main_tab.get_content()
 
         for platform in ChallengePlatform:
             if f"cType: '{platform.value}'" in html:
@@ -167,38 +142,38 @@ class CloudflareSolver:
 
         return None
 
-    def solve_challenge(self) -> None:
+    async def solve_challenge(self) -> None:
         """Solve the Cloudflare challenge on the current page."""
-        verify_button_pattern = re.compile(
-            "Verify (I am|you are) (not a bot|(a )?human)"
-        )
-
-        verify_button = self.page.get_by_role("button", name=verify_button_pattern)
-        challenge_spinner = self.page.locator("#challenge-spinner")
-        challenge_stage = self.page.locator("#challenge-stage")
         start_timestamp = datetime.now()
 
         while (
-            self.extract_clearance_cookie(self.cookies) is None
-            and self.detect_challenge() is not None
+            self.extract_clearance_cookie(await self.get_cookies()) is None
+            and await self.detect_challenge() is not None
             and (datetime.now() - start_timestamp).seconds < self._timeout
         ):
-            if challenge_spinner.is_visible():
-                challenge_spinner.wait_for(state="hidden")
+            widget_input = await self.driver.main_tab.find("input")
 
-            turnstile_frame = self._get_turnstile_frame()
+            if widget_input.parent is None or not widget_input.parent.shadow_roots:
+                await asyncio.sleep(0.25)
+                continue
 
-            if verify_button.is_visible():
-                verify_button.click()
-                challenge_stage.wait_for(state="hidden")
-            elif turnstile_frame is not None:
-                turnstile_frame.get_by_role("checkbox").click()
-                challenge_stage.wait_for(state="hidden")
+            challenge = Element(
+                widget_input.parent.shadow_roots[0],
+                self.driver.main_tab,
+                widget_input.parent.tree,
+            )
 
-            self.page.wait_for_timeout(250)
+            challenge = challenge.children[0]
+
+            if (
+                isinstance(challenge, Element)
+                and "display: none;" not in challenge.attrs["style"]
+            ):
+                await asyncio.sleep(1)
+                await challenge.mouse_click()
 
 
-def main() -> None:
+async def main() -> None:
     parser = argparse.ArgumentParser(
         description="A simple program for scraping Cloudflare clearance (cf_clearance) cookies from websites issuing Cloudflare challenges to visitors"
     )
@@ -230,14 +205,14 @@ def main() -> None:
         "-p",
         "--proxy",
         default=None,
-        help="The proxy server URL to use for the browser requests (SOCKS5 proxy authentication is not supported)",
+        help="The proxy server URL to use for the browser requests",
         type=str,
     )
 
     parser.add_argument(
         "-ua",
         "--user-agent",
-        default="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0",
+        default="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
         help="The user agent to use for the browser requests",
         type=str,
     )
@@ -246,12 +221,6 @@ def main() -> None:
         "--disable-http2",
         action="store_true",
         help="Disable the usage of HTTP/2 for the browser requests",
-    )
-
-    parser.add_argument(
-        "--disable-http3",
-        action="store_true",
-        help="Disable the usage of HTTP/3 for the browser requests",
     )
 
     parser.add_argument(
@@ -277,6 +246,7 @@ def main() -> None:
         level=logging_level,
     )
 
+    logging.getLogger("nodriver").setLevel(logging.WARNING)
     logging.info("Launching %s browser...", "headed" if args.debug else "headless")
 
     challenge_messages = {
@@ -285,34 +255,33 @@ def main() -> None:
         ChallengePlatform.INTERACTIVE: "Solving Cloudflare challenge [Interactive]...",
     }
 
-    with CloudflareSolver(
+    async with CloudflareSolver(
         user_agent=args.user_agent,
         timeout=args.timeout,
         http2=not args.disable_http2,
-        http3=not args.disable_http3,
         headless=not args.debug,
         proxy=args.proxy,
     ) as solver:
         logging.info("Going to %s...", args.url)
 
         try:
-            solver.page.goto(args.url)
-        except PlaywrightError as err:
+            await solver.driver.get(args.url)
+        except TimeoutException as err:
             logging.error(err)
             return
 
-        clearance_cookie = solver.extract_clearance_cookie(solver.cookies)
+        clearance_cookie = solver.extract_clearance_cookie(await solver.get_cookies())
 
         if clearance_cookie is not None:
-            logging.info("Cookie: cf_clearance=%s", clearance_cookie["value"])
+            logging.info("Cookie: cf_clearance=%s", clearance_cookie.value)
             logging.info("User agent: %s", args.user_agent)
 
             if not args.verbose:
-                print(f'cf_clearance={clearance_cookie["value"]}')
+                print(f"cf_clearance={clearance_cookie.value}")
 
             return
 
-        challenge_platform = solver.detect_challenge()
+        challenge_platform = await solver.detect_challenge()
 
         if challenge_platform is None:
             logging.error("No Cloudflare challenge detected.")
@@ -321,21 +290,21 @@ def main() -> None:
         logging.info(challenge_messages[challenge_platform])
 
         try:
-            solver.solve_challenge()
-        except PlaywrightError as err:
-            logging.error(err)
+            await solver.solve_challenge()
+        except TimeoutException:
+            pass
 
-        clearance_cookie = solver.extract_clearance_cookie(solver.cookies)
+        clearance_cookie = solver.extract_clearance_cookie(await solver.get_cookies())
 
     if clearance_cookie is None:
         logging.error("Failed to retrieve a Cloudflare clearance cookie.")
         return
 
-    logging.info("Cookie: cf_clearance=%s", clearance_cookie["value"])
+    logging.info("Cookie: cf_clearance=%s", clearance_cookie.value)
     logging.info("User agent: %s", args.user_agent)
 
     if not args.verbose:
-        print(f'cf_clearance={clearance_cookie["value"]}')
+        print(f"cf_clearance={clearance_cookie.value}")
 
     if args.file is None:
         return
@@ -349,15 +318,15 @@ def main() -> None:
         json_data = {"clearance_cookies": []}
 
     local_timezone = datetime.now(timezone.utc).astimezone().tzinfo
-    unix_timestamp = clearance_cookie["expires"] - timedelta(days=365).total_seconds()
+    unix_timestamp = clearance_cookie.expires - timedelta(days=365).total_seconds()
     timestamp = datetime.fromtimestamp(unix_timestamp, tz=local_timezone).isoformat()
 
     json_data["clearance_cookies"].append(
         {
             "unix_timestamp": int(unix_timestamp),
             "timestamp": timestamp,
-            "domain": clearance_cookie["domain"],
-            "cf_clearance": clearance_cookie["value"],
+            "domain": clearance_cookie.domain,
+            "cf_clearance": clearance_cookie.value,
             "user_agent": args.user_agent,
             "proxy": args.proxy,
         }
@@ -368,4 +337,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
