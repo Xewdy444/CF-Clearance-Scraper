@@ -10,6 +10,14 @@ updates:
       timezone: "America/Chicago"
 
   - package-ecosystem: "pip"
+    target-branch: "nodriver"
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "03:00"
+      timezone: "America/Chicago"
+
+  - package-ecosystem: "pip"
     target-branch: "undetected-chromedriver"
     directory: "/"
     schedule:
