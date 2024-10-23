@@ -3,14 +3,14 @@
 ## Playwright Version
 A simple program for scraping Cloudflare clearance (cf_clearance) cookies from websites issuing Cloudflare challenges to visitors. This program works on all Cloudflare challenge types (JavaScript, managed, and interactive).
 
-> **Alert**
+> [!WARNING]
 This program currently will not be able to solve turnstile challenges due to an issue with Playwright. For more information, see https://github.com/microsoft/playwright/issues/21780. As a temporary solution, pass the `-d` flag and solve the challenge manually or use the [nodriver version](https://github.com/Xewdy444/CF-Clearance-Scraper/tree/nodriver).
 
 ## Clearance Cookie Usage
 In order to bypass Cloudflare challenges with the clearance cookies, you must make sure of two things:
 
 - The user agent used to fetch the clearance cookie must match the user agent being used within the requests that use the clearance cookie
-    > **Note**
+    > [!NOTE]
     > The default user agent used by the scraper is `Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0`.
 - The IP address used to fetch the clearance cookie must match the IP address being used to make the requests that use the clearance cookie
 
@@ -30,7 +30,7 @@ flowchart
 
 
 ## Usage
-> **Note**
+> [!NOTE]
 > Depending on the user agent used, it may affect your ability to solve the Cloudflare challenge.
 
 ```
