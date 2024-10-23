@@ -7,8 +7,8 @@ A simple program for scraping Cloudflare clearance (cf_clearance) cookies from w
 In order to bypass Cloudflare challenges with the clearance cookies, you must make sure of two things:
 
 - The user agent used to fetch the clearance cookie must match the user agent being used within the requests that use the clearance cookie
-    > **Note**
-    > The default user agent used by the scraper is `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36`.
+> [!NOTE]
+> The default user agent used by the scraper is `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36`.
 - The IP address used to fetch the clearance cookie must match the IP address being used to make the requests that use the clearance cookie
 
 ```mermaid
@@ -25,10 +25,10 @@ flowchart
 
 
 ## Usage
-> **Alert**
+> [!WARNING]
 > The `-d` flag must be passed if headless mode does not work.
 
-> **Note**
+> [!NOTE]
 > Depending on the user agent used, it may affect your ability to solve the Cloudflare challenge.
 
 ```
