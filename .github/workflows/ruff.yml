@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - nodriver
-      - playwright
-      - undetected-chromedriver
   pull_request:
 
 permissions:
