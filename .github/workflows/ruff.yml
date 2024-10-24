@@ -3,7 +3,9 @@ name: Analyze With Ruff
 on:
   push:
     branches:
-      - main
+      - nodriver
+      - playwright
+      - undetected-chromedriver
   pull_request:
 
 permissions:
