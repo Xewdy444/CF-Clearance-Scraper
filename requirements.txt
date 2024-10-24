@@ -1,3 +1,4 @@
+nest_asyncio==1.6.0
 nodriver==0.37
 selenium==4.25.0
 selenium_authenticated_proxy==1.1.2

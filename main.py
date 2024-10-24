@@ -2,17 +2,45 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import io
 import json
 import logging
+import sys
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Iterable, List, Optional
 
+import nest_asyncio
 import nodriver
+from nodriver import cdp
 from nodriver.cdp.network import Cookie
 from nodriver.core.element import Element
+from nodriver.core.tab import Tab
 from selenium.common.exceptions import TimeoutException
 from selenium_authenticated_proxy import SeleniumAuthenticatedProxy
+
+nest_asyncio.apply()
+
+
+class PrintLocker:
+    """A class for locking and unlocking the print function."""
+
+    @staticmethod
+    def lock() -> None:
+        """Lock the print function."""
+        sys.stdout = io.StringIO()
+
+    @staticmethod
+    def unlock() -> None:
+        """Unlock the print function."""
+        sys.stdout = sys.__stdout__
+
+    def __enter__(self) -> PrintLocker:
+        self.unlock()
+        return self
+
+    def __exit__(self, *_: Any) -> None:
+        self.lock()
 
 
 class NodriverOptions(list):
@@ -44,8 +72,6 @@ class CloudflareSolver:
 
     Parameters
     ----------
-    user_agent : str
-        The user agent string to use for the browser requests.
     timeout : float
         The timeout in seconds to use for browser actions and solving challenges.
     http2 : bool
@@ -59,36 +85,47 @@ class CloudflareSolver:
     def __init__(
         self,
         *,
-        user_agent: str,
         timeout: float,
         http2: bool,
         headless: bool,
         proxy: Optional[str],
     ) -> None:
         options = NodriverOptions()
-        options.add_argument(f"user-agent={user_agent}")
 
         if not http2:
             options.add_argument("--disable-http2")
+
+        if headless:
+            options.add_argument("--headless=new")
 
         if proxy is not None:
             auth_proxy = SeleniumAuthenticatedProxy(proxy, use_legacy_extension=True)
             auth_proxy.enrich_chrome_options(options)
 
-        config = nodriver.Config(headless=headless, browser_args=options)
+        config = nodriver.Config(browser_args=options)
         self.driver = nodriver.Browser(config)
         self._timeout = timeout
 
     async def __aenter__(self) -> CloudflareSolver:
-        await self.start()
+        await self.driver.start()
         return self
 
     async def __aexit__(self, *_: Any) -> None:
         self.driver.stop()
 
-    async def start(self) -> None:
-        """Start the browser."""
-        await self.driver.start()
+    @staticmethod
+    async def set_user_agent(tab: Tab, user_agent: str) -> None:
+        """
+        Set the user agent for the browser tab.
+
+        Parameters
+        ----------
+        tab : Tab
+            The browser tab.
+        user_agent : str
+            The user agent string.
+        """
+        tab.feed_cdp(cdp.emulation.set_user_agent_override(user_agent))
 
     async def get_cookies(self) -> List[Cookie]:
         """
@@ -170,6 +207,12 @@ class CloudflareSolver:
                 and "display: none;" not in challenge.attrs["style"]
             ):
                 await asyncio.sleep(1)
+
+                try:
+                    await challenge.get_position()
+                except Exception:
+                    continue
+
                 await challenge.mouse_click()
 
 
@@ -237,6 +280,9 @@ async def main() -> None:
         help="Increase the output verbosity",
     )
 
+    print_locker = PrintLocker()
+    print_locker.lock()
+
     args = parser.parse_args()
     logging_level = logging.INFO if args.verbose else logging.ERROR
 
@@ -256,13 +302,14 @@ async def main() -> None:
     }
 
     async with CloudflareSolver(
-        user_agent=args.user_agent,
         timeout=args.timeout,
         http2=not args.disable_http2,
         headless=not args.debug,
         proxy=args.proxy,
     ) as solver:
         logging.info("Going to %s...", args.url)
+        await solver.set_user_agent(solver.driver.main_tab, args.user_agent)
+        await solver.driver.main_tab.reload()
 
         try:
             await solver.driver.get(args.url)
@@ -277,7 +324,8 @@ async def main() -> None:
             logging.info("User agent: %s", args.user_agent)
 
             if not args.verbose:
-                print(f"cf_clearance={clearance_cookie.value}")
+                with print_locker:
+                    print(f"cf_clearance={clearance_cookie.value}")
 
             return
 
@@ -304,7 +352,8 @@ async def main() -> None:
     logging.info("User agent: %s", args.user_agent)
 
     if not args.verbose:
-        print(f"cf_clearance={clearance_cookie.value}")
+        with print_locker:
+            print(f"cf_clearance={clearance_cookie.value}")
 
     if args.file is None:
         return

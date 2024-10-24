@@ -29,7 +29,7 @@ Then, install the Python dependencies:
 
 ## Usage
 > [!WARNING]
-> The `-d` flag must be passed if headless mode does not work.
+> nodriver is currently detected by Cloudflare when using headless mode. You can pass the `-d` flag to run the browser in headed mode.
 
 > [!NOTE]
 > Depending on the user agent used, it may affect your ability to solve the Cloudflare challenge.
