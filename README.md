@@ -1,17 +1,14 @@
 # CF-Clearance-Scraper
 
 ## Playwright Version
-A simple program for scraping Cloudflare clearance (cf_clearance) cookies from websites issuing Cloudflare challenges to visitors. This program works on all Cloudflare challenge types (JavaScript, managed, and interactive).
-
-> [!WARNING]
-This program currently will not be able to solve turnstile challenges due to an issue with Playwright. For more information, see https://github.com/microsoft/playwright/issues/21780. As a temporary solution, pass the `-d` flag and solve the challenge manually or use the [nodriver version](https://github.com/Xewdy444/CF-Clearance-Scraper/tree/nodriver).
+A simple program for scraping Cloudflare clearance (cf_clearance) cookies from websites issuing Cloudflare challenges to visitors. This program works on all Cloudflare challenge types (JavaScript, managed, and interactive). If you would prefer using nodriver, you can check out the [nodriver version](https://github.com/Xewdy444/CF-Clearance-Scraper/tree/nodriver).
 
 ## Clearance Cookie Usage
 In order to bypass Cloudflare challenges with the clearance cookies, you must make sure of two things:
 
 - The user agent used to fetch the clearance cookie must match the user agent being used within the requests that use the clearance cookie
 > [!NOTE]
-> The default user agent used by the scraper is `Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0`.
+> The default user agent used by the scraper is `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36`.
 - The IP address used to fetch the clearance cookie must match the IP address being used to make the requests that use the clearance cookie
 
 ```mermaid
@@ -26,7 +23,7 @@ flowchart
 ## Installation
 
     $ pip install -r requirements.txt
-    $ python -m playwright install --with-deps firefox
+    $ python -m patchright install chromium
 
 
 ## Usage
@@ -57,10 +54,10 @@ options:
 ```
 
 ## Example
-    $ python main.py -v -f cookies.json https://nowsecure.nl
-    [11:33:32] [INFO] Launching headless browser...
-    [11:33:34] [INFO] Going to https://nowsecure.nl...
-    [11:33:34] [INFO] Solving Cloudflare challenge [Managed]...
-    [11:33:38] [INFO] Cookie: cf_clearance=SNMwlsKbfROOWr3FU0jgPn0WY3.z1sn5_b3W6aSRwh8-1690648414-0-160.0.0
-    [11:33:38] [INFO] User agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0
-    [11:33:38] [INFO] Writing Cloudflare clearance cookie information to cookies.json...
+    $ python main.py -v -f cookies.json https://sergiodemo.com/security/challenge/legacy-challenge 
+    [13:36:22] [INFO] Launching headless browser...
+    [13:36:22] [INFO] Going to https://sergiodemo.com/security/challenge/legacy-challenge...
+    [13:36:23] [INFO] Solving Cloudflare challenge [Interactive]...
+    [13:36:25] [INFO] Cookie: cf_clearance=p9G62bGyQSCbZQEooPmXGXiibj7D7vtd6WijZ2ZPQdk-1733513777-1.2.1.1-olBJqsOO23SaLjelD03BE67Fr8Vm0fNWdc.skbcS8D.OWT4kcHJSTM8Tr1inDeSBFKQWxHZrShKR43Ml0gN1mvFHS7erZeQdoRYjwMDSHoYotG2.EvpuHWIyz0z7CoclXBIuSpM6kzvuKKm3bY0bhv5Sbl9IMnP08660bHEsPSS8JZTxLAsmmdHcnEU20nSbh1PuZaye_pmyrtbFGgDcd9uEntuocj55_WSx4BQfjJnj.8gz6w9bZ1BWQJFYrysoVD9LDQczl6FosYWc_hbmDz1s5nHgooQGGkSOWjsZrf84JvlXQ85PGEE1nTINe_gLm_vgZLBXAJS32DAgR0.vhctysUuKR3SosY9T_696hgDITz37g_kU_ZJlOD1S2KAug_uwHgsiRpHUxR7jTiHUQ_Fh6v453UrRPMkNZGctGC4
+    [13:36:25] [INFO] User agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36
+    [13:36:25] [INFO] Writing Cloudflare clearance cookie information to cookies.json...

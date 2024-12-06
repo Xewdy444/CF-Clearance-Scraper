@@ -9,9 +9,9 @@ from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Dict, Iterable, List, Optional
 
-from playwright.sync_api import Cookie
-from playwright.sync_api import Error as PlaywrightError
-from playwright.sync_api import Frame, sync_playwright
+from patchright.sync_api import Cookie
+from patchright.sync_api import Error as PlaywrightError
+from patchright.sync_api import Frame, sync_playwright
 
 
 class ChallengePlatform(Enum):
@@ -53,17 +53,19 @@ class CloudflareSolver:
         proxy: Optional[str],
     ) -> None:
         self._playwright = sync_playwright().start()
+        args: List[str] = []
+
+        if not http2:
+            args.append("--disable-http2")
+
+        if not http3:
+            args.append("--disable-quic")
 
         if proxy is not None:
             proxy = self._parse_proxy(proxy)
 
-        browser = self._playwright.firefox.launch(
-            firefox_user_prefs={
-                "network.http.http2.enabled": http2,
-                "network.http.http3.enable": http3,
-            },
-            headless=headless,
-            proxy=proxy,
+        browser = self._playwright.chromium.launch(
+            args=args, headless=headless, proxy=proxy
         )
 
         context = browser.new_context(user_agent=user_agent)
@@ -192,7 +194,7 @@ class CloudflareSolver:
                 verify_button.click()
                 challenge_stage.wait_for(state="hidden")
             elif turnstile_frame is not None:
-                turnstile_frame.get_by_role("checkbox").click()
+                self.page.mouse.click(210, 290)
                 challenge_stage.wait_for(state="hidden")
 
             self.page.wait_for_timeout(250)
@@ -237,7 +239,7 @@ def main() -> None:
     parser.add_argument(
         "-ua",
         "--user-agent",
-        default="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
+        default="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
         help="The user agent to use for the browser requests",
         type=str,
     )
@@ -303,29 +305,21 @@ def main() -> None:
 
         clearance_cookie = solver.extract_clearance_cookie(solver.cookies)
 
-        if clearance_cookie is not None:
-            logging.info("Cookie: cf_clearance=%s", clearance_cookie["value"])
-            logging.info("User agent: %s", args.user_agent)
+        if clearance_cookie is None:
+            challenge_platform = solver.detect_challenge()
 
-            if not args.verbose:
-                print(f'cf_clearance={clearance_cookie["value"]}')
+            if challenge_platform is None:
+                logging.error("No Cloudflare challenge detected.")
+                return
 
-            return
+            logging.info(challenge_messages[challenge_platform])
 
-        challenge_platform = solver.detect_challenge()
+            try:
+                solver.solve_challenge()
+            except PlaywrightError as err:
+                logging.error(err)
 
-        if challenge_platform is None:
-            logging.error("No Cloudflare challenge detected.")
-            return
-
-        logging.info(challenge_messages[challenge_platform])
-
-        try:
-            solver.solve_challenge()
-        except PlaywrightError as err:
-            logging.error(err)
-
-        clearance_cookie = solver.extract_clearance_cookie(solver.cookies)
+            clearance_cookie = solver.extract_clearance_cookie(solver.cookies)
 
     if clearance_cookie is None:
         logging.error("Failed to retrieve a Cloudflare clearance cookie.")
