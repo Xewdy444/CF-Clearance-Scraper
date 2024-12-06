@@ -27,7 +27,7 @@ flowchart
 
 
 ## Usage
-> [!NOTE]
+> [!WARNING]
 > Depending on the user agent used, it may affect your ability to solve the Cloudflare challenge.
 
 ```
