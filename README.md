@@ -23,7 +23,7 @@ flowchart
 ## Installation
 
     $ pip install -r requirements.txt
-    $ python -m patchright install chromium
+    $ python -m patchright install chromium --with-deps
 
 
 ## Usage
