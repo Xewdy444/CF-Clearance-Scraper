@@ -326,7 +326,8 @@ def main() -> None:
             logging.error(err)
             return
 
-        clearance_cookie = solver.extract_clearance_cookie(solver.cookies)
+        all_cookies = solver.cookies
+        clearance_cookie = solver.extract_clearance_cookie(all_cookies)
 
         if clearance_cookie is None:
             challenge_platform = solver.detect_challenge()
