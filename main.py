@@ -7,11 +7,15 @@ import re
 import urllib.parse as urlparse
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Final, Iterable, List, Optional
 
 from patchright.sync_api import Cookie
 from patchright.sync_api import Error as PlaywrightError
 from patchright.sync_api import Frame, sync_playwright
+
+COMMAND: Final[str] = (
+    '{name}: {binary} --header "Cookie: {cookies}" --header "User-Agent: {user_agent}" {url}'
+)
 
 
 class ChallengePlatform(Enum):
@@ -257,29 +261,48 @@ def main() -> None:
     )
 
     parser.add_argument(
-        "-d",
-        "--debug",
+        "--headed",
         action="store_true",
         help="Run the browser in headed mode",
     )
 
     parser.add_argument(
-        "-v",
-        "--verbose",
+        "-ac",
+        "--all-cookies",
         action="store_true",
-        help="Increase the output verbosity",
+        help="Retrieve all cookies from the page, not just the Cloudflare clearance cookie",
+    )
+
+    parser.add_argument(
+        "-c",
+        "--curl",
+        action="store_true",
+        help="Get the cURL command for the request with the cookies and user agent",
+    )
+
+    parser.add_argument(
+        "-w",
+        "--wget",
+        action="store_true",
+        help="Get the Wget command for the request with the cookies and user agent",
+    )
+
+    parser.add_argument(
+        "-a",
+        "--aria2",
+        action="store_true",
+        help="Get the aria2 command for the request with the cookies and user agent",
     )
 
     args = parser.parse_args()
-    logging_level = logging.INFO if args.verbose else logging.ERROR
 
     logging.basicConfig(
         format="[%(asctime)s] [%(levelname)s] %(message)s",
         datefmt="%H:%M:%S",
-        level=logging_level,
+        level=logging.INFO,
     )
 
-    logging.info("Launching %s browser...", "headed" if args.debug else "headless")
+    logging.info("Launching %s browser...", "headed" if args.headed else "headless")
 
     challenge_messages = {
         ChallengePlatform.JAVASCRIPT: "Solving Cloudflare challenge [JavaScript]...",
@@ -292,7 +315,7 @@ def main() -> None:
         timeout=args.timeout,
         http2=not args.disable_http2,
         http3=not args.disable_http3,
-        headless=not args.debug,
+        headless=not args.headed,
         proxy=args.proxy,
     ) as solver:
         logging.info("Going to %s...", args.url)
@@ -319,17 +342,84 @@ def main() -> None:
             except PlaywrightError as err:
                 logging.error(err)
 
-            clearance_cookie = solver.extract_clearance_cookie(solver.cookies)
+            all_cookies = solver.cookies
+            clearance_cookie = solver.extract_clearance_cookie(all_cookies)
 
     if clearance_cookie is None:
         logging.error("Failed to retrieve a Cloudflare clearance cookie.")
         return
 
-    logging.info("Cookie: cf_clearance=%s", clearance_cookie["value"])
+    cookie_string = "; ".join(
+        f'{cookie["name"]}={cookie["value"]}' for cookie in all_cookies
+    )
+
+    if args.all_cookies:
+        logging.info("All cookies: %s", cookie_string)
+    else:
+        logging.info("Cookie: cf_clearance=%s", clearance_cookie["value"])
+
     logging.info("User agent: %s", args.user_agent)
 
-    if not args.verbose:
-        print(f'cf_clearance={clearance_cookie["value"]}')
+    if args.curl:
+        logging.info(
+            COMMAND.format(
+                name="cURL",
+                binary="curl",
+                cookies=(
+                    cookie_string
+                    if args.all_cookies
+                    else f'cf_clearance={clearance_cookie["value"]}'
+                ),
+                user_agent=args.user_agent,
+                url=(
+                    f"--proxy {args.proxy} {args.url}"
+                    if args.proxy is not None
+                    else args.url
+                ),
+            )
+        )
+
+    if args.wget:
+        if args.proxy is not None:
+            logging.warning(
+                "Proxies must be set in an environment variable or config file for Wget."
+            )
+
+        logging.info(
+            COMMAND.format(
+                name="Wget",
+                binary="wget",
+                cookies=(
+                    cookie_string
+                    if args.all_cookies
+                    else f'cf_clearance={clearance_cookie["value"]}'
+                ),
+                user_agent=args.user_agent,
+                url=args.url,
+            )
+        )
+
+    if args.aria2:
+        if args.proxy is not None and args.proxy.casefold().startswith("socks"):
+            logging.warning("SOCKS proxies are not supported by aria2.")
+
+        logging.info(
+            COMMAND.format(
+                name="aria2",
+                binary="aria2c",
+                cookies=(
+                    cookie_string
+                    if args.all_cookies
+                    else f'cf_clearance={clearance_cookie["value"]}'
+                ),
+                user_agent=args.user_agent,
+                url=(
+                    f"--all-proxy {args.proxy} {args.url}"
+                    if args.proxy is not None
+                    else args.url
+                ),
+            )
+        )
 
     if args.file is None:
         return
@@ -340,18 +430,18 @@ def main() -> None:
         with open(args.file, encoding="utf-8") as file:
             json_data = json.load(file)
     except (FileNotFoundError, json.JSONDecodeError):
-        json_data = {"clearance_cookies": []}
+        json_data: Dict[str, List[Dict[str, Any]]] = {}
 
     local_timezone = datetime.now(timezone.utc).astimezone().tzinfo
     unix_timestamp = clearance_cookie["expires"] - timedelta(days=365).total_seconds()
     timestamp = datetime.fromtimestamp(unix_timestamp, tz=local_timezone).isoformat()
 
-    json_data["clearance_cookies"].append(
+    json_data.setdefault(clearance_cookie["domain"], []).append(
         {
             "unix_timestamp": int(unix_timestamp),
             "timestamp": timestamp,
-            "domain": clearance_cookie["domain"],
             "cf_clearance": clearance_cookie["value"],
+            "cookies": all_cookies,
             "user_agent": args.user_agent,
             "proxy": args.proxy,
         }
