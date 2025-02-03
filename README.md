@@ -8,7 +8,7 @@ In order to bypass Cloudflare challenges with the clearance cookies, you must ma
 
 - The user agent used to fetch the clearance cookie must match the user agent being used within the requests that use the clearance cookie
 > [!NOTE]
-> The default user agent used by the scraper is `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36`.
+> The default user agent used by the scraper is `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36`.
 - The IP address used to fetch the clearance cookie must match the IP address being used to make the requests that use the clearance cookie
 
 ```mermaid
@@ -65,5 +65,5 @@ options:
     [13:27:14] [INFO] Going to https://sergiodemo.com/security/challenge/legacy-challenge...
     [13:27:15] [INFO] Solving Cloudflare challenge [Interactive]...
     [13:27:18] [INFO] Cookie: cf_clearance=QEAHjebTYeAMsBTeDwsn7aM0sFqMHK5lOsWL9CdZjLk-1736882824-1.2.1.1-FBxJ4RDl.z8ccDWf0.zSVIpk_4bVLINF90adG.Qa8H76Xt1NsgG7cPhNilBinSlkvHMtWM4cpTD1jCsydCIVukmAsouclcKDAz3TAH4UuWUyvXSmnNuBPrFIshz1bByRwfeGjZY45uNV__55S4r4xPldb6yrw0ktCZkKEmfJv64Sw4zbhO3JWsPPIN0yZ3BH2zHKNB6oY_g5KELcFFffMHQcSaZ3yopUQidsdHKP9afDpJC4W5G.7E6B.QVIwW5nj1og9h9h1aP8gTXsEDpJxFNnnBh07n009fDrMxvtFnUcPLYBe6xddAn3WaeeyRH_Zixe7xz1Fd83v1lLBfiZ7g
-    [13:27:18] [INFO] User agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36
+    [13:27:18] [INFO] User agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36
     [13:27:18] [INFO] Writing Cloudflare clearance cookie information to cookies.json...
