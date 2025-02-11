@@ -1,7 +1,7 @@
 # CF-Clearance-Scraper
 
 ## Playwright Version
-A simple program for scraping Cloudflare clearance (cf_clearance) cookies from websites issuing Cloudflare challenges to visitors. This program works on all Cloudflare challenge types (JavaScript, managed, and interactive). If you would prefer using nodriver, you can check out the [nodriver version](https://github.com/Xewdy444/CF-Clearance-Scraper/tree/nodriver).
+A simple program for scraping Cloudflare clearance (cf_clearance) cookies from websites issuing Cloudflare challenges to visitors. This program works on all Cloudflare challenge types (JavaScript, managed, and interactive). If you would prefer using zendriver, you can check out the [Zendriver version](https://github.com/Xewdy444/CF-Clearance-Scraper/tree/zendriver).
 
 ## Clearance Cookie Usage
 In order to bypass Cloudflare challenges with the clearance cookies, you must make sure of two things:
@@ -28,7 +28,7 @@ flowchart
 
 ## Usage
 > [!NOTE]
-> If headless mode isn't working for you, try using headed mode or the [nodriver version](https://github.com/Xewdy444/CF-Clearance-Scraper/tree/nodriver).
+> If headless mode isn't working for you, try using headed mode or the [Zendriver version](https://github.com/Xewdy444/CF-Clearance-Scraper/tree/zendriver).
 
 > [!WARNING]
 > Depending on the user agent used, it may affect your ability to solve the Cloudflare challenge.
