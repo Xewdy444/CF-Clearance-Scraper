@@ -32,7 +32,7 @@ class CloudflareSolver:
 
     Parameters
     ----------
-    user_agent : str
+    user_agent : Optional[str]
         The user agent string to use for the browser requests.
     timeout : float
         The timeout in seconds to use for browser actions and solving challenges.
@@ -49,7 +49,7 @@ class CloudflareSolver:
     def __init__(
         self,
         *,
-        user_agent: str,
+        user_agent: Optional[str],
         timeout: float,
         http2: bool,
         http3: bool,
@@ -156,6 +156,17 @@ class CloudflareSolver:
 
         return None
 
+    def get_user_agent(self) -> str:
+        """
+        Get the current user agent string.
+
+        Returns
+        -------
+        str
+            The user agent string.
+        """
+        return self.page.evaluate("navigator.userAgent")
+
     def detect_challenge(self) -> Optional[ChallengePlatform]:
         """
         Detect the Cloudflare challenge platform on the current page.
@@ -243,7 +254,7 @@ def main() -> None:
     parser.add_argument(
         "-ua",
         "--user-agent",
-        default="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        default=None,
         help="The user agent to use for the browser requests",
         type=str,
     )
@@ -345,6 +356,7 @@ def main() -> None:
 
             all_cookies = solver.cookies
             clearance_cookie = solver.extract_clearance_cookie(all_cookies)
+            user_agent = solver.get_user_agent()
 
     if clearance_cookie is None:
         logging.error("Failed to retrieve a Cloudflare clearance cookie.")
@@ -359,7 +371,7 @@ def main() -> None:
     else:
         logging.info("Cookie: cf_clearance=%s", clearance_cookie["value"])
 
-    logging.info("User agent: %s", args.user_agent)
+    logging.info("User agent: %s", user_agent)
 
     if args.curl:
         logging.info(
@@ -371,7 +383,7 @@ def main() -> None:
                     if args.all_cookies
                     else f'cf_clearance={clearance_cookie["value"]}'
                 ),
-                user_agent=args.user_agent,
+                user_agent=user_agent,
                 url=(
                     f"--proxy {args.proxy} {args.url}"
                     if args.proxy is not None
@@ -395,7 +407,7 @@ def main() -> None:
                     if args.all_cookies
                     else f'cf_clearance={clearance_cookie["value"]}'
                 ),
-                user_agent=args.user_agent,
+                user_agent=user_agent,
                 url=args.url,
             )
         )
@@ -413,7 +425,7 @@ def main() -> None:
                     if args.all_cookies
                     else f'cf_clearance={clearance_cookie["value"]}'
                 ),
-                user_agent=args.user_agent,
+                user_agent=user_agent,
                 url=(
                     f"--all-proxy {args.proxy} {args.url}"
                     if args.proxy is not None
@@ -443,7 +455,7 @@ def main() -> None:
             "timestamp": timestamp,
             "cf_clearance": clearance_cookie["value"],
             "cookies": all_cookies,
-            "user_agent": args.user_agent,
+            "user_agent": user_agent,
             "proxy": args.proxy,
         }
     )
