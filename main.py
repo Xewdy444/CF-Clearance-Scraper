@@ -356,7 +356,8 @@ def main() -> None:
 
             all_cookies = solver.cookies
             clearance_cookie = solver.extract_clearance_cookie(all_cookies)
-            user_agent = solver.get_user_agent()
+
+        user_agent = solver.get_user_agent()
 
     if clearance_cookie is None:
         logging.error("Failed to retrieve a Cloudflare clearance cookie.")
