@@ -1,1 +1,1 @@
-patchright==1.55.2
+patchright==1.56.0
