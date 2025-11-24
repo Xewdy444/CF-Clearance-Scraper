@@ -198,7 +198,7 @@ class CloudflareSolver:
         while (
             self.extract_clearance_cookie(self.cookies) is None
             and (self.detect_challenge() is not None
-            or (datetime.now() - start_timestamp).seconds < self._timeout) 
+                or (datetime.now() - start_timestamp).seconds < self._timeout)
             and (datetime.now() - start_timestamp).seconds < self._timeout
         ):
             if challenge_spinner.is_visible():
