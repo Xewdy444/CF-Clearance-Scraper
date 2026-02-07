@@ -5,16 +5,18 @@ import asyncio
 import json
 import logging
 import random
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Dict, Final, Iterable, List, Optional
+from urllib.parse import urlparse
 
 import latest_user_agents
 import user_agents
 import zendriver
-from selenium_authenticated_proxy import SeleniumAuthenticatedProxy
 from zendriver import cdp
 from zendriver.cdp.emulation import UserAgentBrandVersion, UserAgentMetadata
+from zendriver.cdp.fetch import AuthChallengeResponse, AuthRequired, RequestPaused
 from zendriver.cdp.network import T_JSON_DICT, Cookie
 from zendriver.core.element import Element
 
@@ -47,6 +49,59 @@ class ChallengePlatform(Enum):
     JAVASCRIPT = "non-interactive"
     MANAGED = "managed"
     INTERACTIVE = "interactive"
+
+
+@dataclass
+class Proxy:
+    """A class representing a proxy server."""
+
+    scheme: str
+    host: str
+    port: Optional[int] = None
+    username: Optional[str] = None
+    password: Optional[str] = None
+
+    @classmethod
+    def from_url(cls, proxy_url: str) -> Proxy:
+        """
+        Create a Proxy instance from a proxy URL.
+
+        Parameters
+        ----------
+        proxy_url : str
+            The proxy server URL.
+
+        Returns
+        -------
+        Proxy
+            The Proxy instance.
+        """
+        parsed = urlparse(proxy_url)
+
+        return cls(
+            scheme=parsed.scheme,
+            host=parsed.hostname or "",
+            port=parsed.port,
+            username=parsed.username,
+            password=parsed.password,
+        )
+
+    @property
+    def url(self) -> str:
+        """
+        Get the proxy URL without authentication.
+
+        Returns
+        -------
+        str
+            The proxy URL.
+        """
+        host = self.host
+
+        if self.port:
+            host += f":{self.port}"
+
+        return f"{self.scheme}://{host}"
 
 
 class CloudflareSolver:
@@ -90,8 +145,10 @@ class CloudflareSolver:
         if not http3:
             config.add_argument("--disable-quic")
 
-        auth_proxy = SeleniumAuthenticatedProxy(proxy)
-        auth_proxy.enrich_chrome_options(config)
+        self._proxy = Proxy.from_url(proxy) if proxy is not None else None
+
+        if self._proxy is not None:
+            config.add_argument(f"--proxy-server={self._proxy.url}")
 
         self.driver = zendriver.Browser(config)
         self._timeout = timeout
@@ -102,6 +159,46 @@ class CloudflareSolver:
 
     async def __aexit__(self, *_: Any) -> None:
         await self.driver.stop()
+
+    async def _on_auth_required(self, event: AuthRequired) -> None:
+        """
+        Handle authentication requests for the proxy server.
+
+        Parameters
+        ----------
+        event : AuthRequired
+            The authentication required event.
+        """
+        if event.auth_challenge.source == "Proxy":
+            await self.driver.main_tab.send(
+                cdp.fetch.continue_with_auth(
+                    event.request_id,
+                    AuthChallengeResponse(
+                        response="ProvideCredentials",
+                        username=self._proxy.username,
+                        password=self._proxy.password,
+                    ),
+                )
+            )
+        else:
+            await self.driver.main_tab.send(
+                cdp.fetch.continue_with_auth(
+                    event.request_id, AuthChallengeResponse(response="Default")
+                )
+            )
+
+    async def _continue_request(self, event: RequestPaused) -> None:
+        """
+        Continue a paused request.
+
+        Parameters
+        ----------
+        event : RequestPaused
+            The request paused event.
+        """
+        await self.driver.main_tab.send(
+            cdp.fetch.continue_request(request_id=event.request_id)
+        )
 
     @staticmethod
     def _format_cookies(cookies: Iterable[Cookie]) -> List[T_JSON_DICT]:
@@ -213,6 +310,24 @@ class CloudflareSolver:
                 user_agent, user_agent_metadata=metadata
             )
         )
+
+    async def request_page(self, url: str) -> None:
+        """
+        Request a page with the browser,
+        setting up handlers for proxy authentication if a proxy is being used.
+
+        Parameters
+        ----------
+        url : str
+            The URL of the page to request.
+        """
+        if self._proxy is not None:
+            await self.driver.get()
+            self.driver.main_tab.add_handler(AuthRequired, self._on_auth_required)
+            self.driver.main_tab.add_handler(RequestPaused, self._continue_request)
+            self.driver.main_tab.feed_cdp(cdp.fetch.enable(handle_auth_requests=True))
+
+        await self.driver.get(url)
 
     async def detect_challenge(self) -> Optional[ChallengePlatform]:
         """
@@ -388,7 +503,7 @@ async def main() -> None:
         logging.info("Going to %s...", args.url)
 
         try:
-            await solver.driver.get(args.url)
+            await solver.request_page(args.url)
         except asyncio.TimeoutError as err:
             logging.error(err)
             return
