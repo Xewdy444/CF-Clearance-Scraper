@@ -11,7 +11,8 @@ from enum import Enum
 from typing import Any, Dict, Final, Iterable, List, Optional
 from urllib.parse import urlparse
 
-import latest_user_agents
+import chrome_version
+import requests
 import user_agents
 import zendriver
 from zendriver import cdp
@@ -34,13 +35,26 @@ def get_chrome_user_agent() -> str:
     str
         The user agent string.
     """
-    chrome_user_agents = [
-        user_agent
-        for user_agent in latest_user_agents.get_latest_user_agents()
-        if "Chrome" in user_agent and "Edg" not in user_agent
+    full_version = chrome_version.get_chrome_version()
+
+    if full_version is None:
+        response = requests.get(
+            "https://versionhistory.googleapis.com/v1/chrome/platforms/all/channels/stable/versions",
+            params={"order_by": "version desc", "page_size": 1},
+        )
+
+        response_json = response.json()
+        full_version = response_json["versions"][0]["version"]
+
+    major_version = int(full_version.split(".")[0])
+
+    user_agents = [
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{version}.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{version}.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{version}.0.0.0 Safari/537.36",
     ]
 
-    return random.choice(chrome_user_agents)
+    return random.choice(user_agents).format(version=major_version)
 
 
 class ChallengePlatform(Enum):
