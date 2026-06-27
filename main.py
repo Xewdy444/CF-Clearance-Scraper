@@ -48,13 +48,13 @@ def get_chrome_user_agent() -> str:
 
     major_version = int(full_version.split(".")[0])
 
-    user_agents = [
+    user_agent_list = [
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{version}.0.0.0 Safari/537.36",
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{version}.0.0.0 Safari/537.36",
         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{version}.0.0.0 Safari/537.36",
     ]
 
-    return random.choice(user_agents).format(version=major_version)
+    return random.choice(user_agent_list).format(version=major_version)
 
 
 class ChallengePlatform(Enum):
