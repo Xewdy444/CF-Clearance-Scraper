@@ -3,7 +3,7 @@ name: Analyze With Ruff
 on:
   push:
     branches:
-      - zendriver
+      - main
   pull_request:
 
 permissions:

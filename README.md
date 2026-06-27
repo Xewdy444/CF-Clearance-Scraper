@@ -1,7 +1,5 @@
 # CF-Clearance-Scraper
-
-## Zendriver Version
-A simple program for scraping Cloudflare clearance (cf_clearance) cookies from websites issuing Cloudflare challenges to visitors. This program works on all Cloudflare challenge types (JavaScript, managed, and interactive). If you would prefer using Playwright, you can check out the [Playwright version](https://github.com/Xewdy444/CF-Clearance-Scraper/tree/playwright).
+A simple program for scraping Cloudflare clearance (cf_clearance) cookies from websites issuing Cloudflare challenges to visitors. This program works on all Cloudflare challenge types (JavaScript, managed, and interactive).
 
 
 ## Clearance Cookie Usage

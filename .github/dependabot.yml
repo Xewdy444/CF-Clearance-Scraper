@@ -2,15 +2,6 @@ version: 2
 
 updates:
   - package-ecosystem: "pip"
-    target-branch: "zendriver"
-    directory: "/"
-    schedule:
-      interval: "daily"
-      time: "03:00"
-      timezone: "America/Chicago"
-
-  - package-ecosystem: "pip"
-    target-branch: "playwright"
     directory: "/"
     schedule:
       interval: "daily"
