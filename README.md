@@ -1,6 +1,19 @@
+<div align="center">
+  <a href="https://www.swiftproxy.net/?ref=Xewdy444">
+    <img src="https://github.com/user-attachments/assets/6aca80d3-ca51-4782-bfb0-6364b0a6b57f" width="60%" />
+  </a>
+  <br>
+  <strong>Swiftproxy</strong> — Premium residential proxies designed for Cloudflare-protected websites, browser automation, and web scraping. <strong>Access 80M+ residential IPs across 190+ countries</strong> with rotating and sticky sessions, <strong>HTTP/HTTPS/SOCKS5</strong> support, non-expiring traffic, and reliable connections for large-scale automation and data collection.
+  <br><br>
+  <strong> 🎁 Free trial available <br> 🏷️ 10% OFF with code: PROXY90 </strong>
+  <br><br>
+  <strong>Link</strong>: https://www.swiftproxy.net/?ref=Xewdy444
+</div>
+
+---
+
 # CF-Clearance-Scraper
 A simple program for scraping Cloudflare clearance (cf_clearance) cookies from websites issuing Cloudflare challenges to visitors. This program works on all Cloudflare challenge types (JavaScript, managed, and interactive).
-
 
 ## Clearance Cookie Usage
 In order to bypass Cloudflare challenges with the clearance cookies, you must make sure of two things:
