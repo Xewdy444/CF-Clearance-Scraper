@@ -1,4 +1,4 @@
 chrome_version==0.4.0
 Requests==2.34.2
 user_agents==2.2.0
-zendriver==0.15.4
+zendriver==0.15.5
